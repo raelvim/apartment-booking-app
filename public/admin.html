@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Admin - Booking Management</title>
+    <link rel="stylesheet" href="style.css" />
+    <style>
+      body {
+        background-color: #f4f7f6;
+        font-family: "Montserrat", sans-serif;
+      }
+      .admin-container {
+        padding: 40px;
+        max-width: 1100px;
+        margin: 50px auto;
+        background: #fff;
+        border-radius: 12px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+      }
+      .admin-title {
+        text-align: center;
+        margin-bottom: 40px;
+        font-family: "Roboto", sans-serif;
+      }
+      .bookings-section {
+        margin-bottom: 50px;
+      }
+      .bookings-section h2 {
+        font-family: "Roboto", sans-serif;
+        border-bottom: 2px solid #eee;
+        padding-bottom: 10px;
+        margin-bottom: 20px;
+      }
+      .bookings-table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+      .bookings-table th,
+      .bookings-table td {
+        padding: 15px;
+        border-bottom: 1px solid #e0e0e0;
+        text-align: left;
+        vertical-align: middle;
+      }
+      .bookings-table th {
+        background-color: #f8f9fa;
+        font-weight: 700;
+      }
+      .bookings-table tr:last-child td {
+        border-bottom: none;
+      }
+      .no-bookings-message {
+        text-align: center;
+        color: #7f8c8d;
+        padding: 30px;
+      }
+      .actions-cell {
+        text-align: right;
+      }
+      .btn-action {
+        font-size: 0.8rem;
+        padding: 8px 12px;
+        margin-left: 8px;
+        cursor: pointer;
+        border: none;
+        border-radius: 5px;
+        color: white;
+        transition: opacity 0.3s ease;
+      }
+      .btn-action:hover {
+        opacity: 0.8;
+      }
+      .btn-cancel {
+        background-color: #f39c12;
+      }
+      .btn-delete {
+        background-color: #e74c3c;
+      }
+      .status-cancelled {
+        color: #e74c3c;
+        font-style: italic;
+      }
+      .status-completed {
+        color: #2ecc71;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="admin-container">
+      <h1 class="admin-title">Booking Management</h1>
+
+      <div class="bookings-section">
+        <h2>Active Bookings</h2>
+        <table class="bookings-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Check-In</th>
+              <th>Check-Out</th>
+              <th class="actions-cell">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="active-bookings-tbody"></tbody>
+        </table>
+        <p
+          id="no-active-bookings"
+          class="no-bookings-message"
+          style="display: none"
+        >
+          No active bookings.
+        </p>
+      </div>
+
+      <div class="bookings-section">
+        <h2>Past & Cancelled Bookings</h2>
+        <table class="bookings-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Check-In</th>
+              <th>Check-Out</th>
+              <th>Status</th>
+              <th class="actions-cell">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="past-bookings-tbody"></tbody>
+        </table>
+        <p
+          id="no-past-bookings"
+          class="no-bookings-message"
+          style="display: none"
+        >
+          No completed or cancelled bookings.
+        </p>
+      </div>
+    </div>
+
+    <script>
+      // public/admin.html -> <script>
+
+      document.addEventListener("DOMContentLoaded", () => {
+        const token = localStorage.getItem("adminToken");
+        if (!token) {
+          window.location.href = "/login.html";
+          return;
+        }
+
+        const activeTbody = document.getElementById("active-bookings-tbody");
+        const pastTbody = document.getElementById("past-bookings-tbody");
+        const noActiveMsg = document.getElementById("no-active-bookings");
+        const noPastMsg = document.getElementById("no-past-bookings");
+
+        async function fetchWithAuth(url, options = {}) {
+          const headers = {
+            ...options.headers,
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          };
+          const response = await fetch(url, { ...options, headers });
+          if (response.status === 401 || response.status === 403) {
+            localStorage.removeItem("adminToken");
+            window.location.href = "/login.html";
+            throw new Error("Session expired or invalid.");
+          }
+          return response;
+        }
+
+        function createRow(booking) {
+          const tr = document.createElement("tr");
+          const statusClass = `status-${booking.bookingStatus}`;
+          const isPastOrCancelled =
+            booking.bookingStatus !== "confirmed" ||
+            new Date(booking.checkOut) < new Date();
+
+          tr.innerHTML = `
+            <td>${booking.id}</td>
+            <td>${new Date(booking.checkIn).toLocaleDateString("en-US")}</td>
+            <td>${new Date(booking.checkOut).toLocaleDateString("en-US")}</td>
+            ${
+              isPastOrCancelled
+                ? `<td class="${statusClass}">${booking.bookingStatus}</td>`
+                : ""
+            }
+            <td class="actions-cell">
+                ${
+                  booking.bookingStatus === "confirmed" && !isPastOrCancelled
+                    ? `<button class="btn-action btn-cancel" data-id="${booking.id}">Cancel</button>`
+                    : ""
+                }
+                <button class="btn-action btn-delete" data-id="${
+                  booking.id
+                }">Delete</button>
+            </td>
+        `;
+          return tr;
+        }
+
+        function renderBookings(bookings) {
+          activeTbody.innerHTML = "";
+          pastTbody.innerHTML = "";
+          noActiveMsg.style.display =
+            bookings.active.length === 0 ? "block" : "none";
+          noPastMsg.style.display =
+            bookings.completed.length === 0 && bookings.cancelled.length === 0
+              ? "block"
+              : "none";
+          bookings.active.forEach((b) => activeTbody.appendChild(createRow(b)));
+          bookings.completed.forEach((b) =>
+            pastTbody.appendChild(createRow(b))
+          );
+          bookings.cancelled.forEach((b) =>
+            pastTbody.appendChild(createRow(b))
+          );
+        }
+
+        async function fetchAndRenderBookings() {
+          try {
+            const response = await fetchWithAuth("/api/admin/bookings");
+            const bookingsData = await response.json();
+            renderBookings(bookingsData);
+          } catch (error) {
+            console.error("Failed to fetch bookings:", error);
+          }
+        }
+
+        document
+          .querySelector(".admin-container")
+          .addEventListener("click", async (e) => {
+            const target = e.target;
+            const bookingId = target.dataset.id;
+            if (!bookingId || !target.classList.contains("btn-action")) return;
+
+            if (target.classList.contains("btn-cancel")) {
+              if (
+                confirm(
+                  `Are you sure you want to cancel booking #${bookingId}?`
+                )
+              ) {
+                await fetchWithAuth(`/api/admin/bookings/${bookingId}/cancel`, {
+                  method: "POST",
+                });
+                fetchAndRenderBookings(); // CORRECCIÓN: Llamada a la función correcta
+              }
+            }
+
+            if (target.classList.contains("btn-delete")) {
+              if (
+                confirm(
+                  `ARE YOU SURE you want to PERMANENTLY DELETE booking #${bookingId}?`
+                )
+              ) {
+                await fetchWithAuth(`/api/admin/bookings/${bookingId}`, {
+                  method: "DELETE",
+                });
+                fetchAndRenderBookings(); // CORRECCIÓN: Llamada a la función correcta
+              }
+            }
+          });
+
+        fetchAndRenderBookings();
+      });
+    </script>
+  </body>
+</html>
