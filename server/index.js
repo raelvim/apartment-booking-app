@@ -2,6 +2,8 @@
 
 const express = require("express");
 const path = require("path");
+const http = require("http");
+const WebSocket = require("ws");
 const db = require("./database.js");
 const stripe = require("stripe")(
   "sk_test_51SAEbmGtWaCmr4GY7yV1UI0D5UCHBLjLT9auYQkhOw1M4v4hs6jFOQEtlLklq35aLWdATsD3bksbm41rHzIGadUg00DFwc3MXN"
@@ -15,6 +17,36 @@ const JWT_SECRET = "sebas25"; // Considera cambiar esto a algo más seguro y dif
 
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "../public")));
+
+const server = http.createServer(app);
+const wss = new WebSocket.Server({ noServer: true });
+
+const adminClients = new Set();
+
+server.on("upgrade", (request, socket, head) => {
+  // Manejamos la "actualización" de la conexión de HTTP a WebSocket
+  wss.handleUpgrade(request, socket, head, (ws) => {
+    wss.emit("connection", ws, request);
+  });
+});
+
+wss.on("connection", (ws) => {
+  console.log("Client connected to WebSocket");
+  adminClients.add(ws); // Añadimos el nuevo cliente a nuestro set
+
+  ws.on("close", () => {
+    console.log("Client disconnected");
+    adminClients.delete(ws); // Lo eliminamos cuando se desconecta
+  });
+});
+
+function broadcastAdminUpdate() {
+  wss.clients.forEach((client) => {
+    if (client.readyState === WebSocket.OPEN) {
+      client.send("bookings_updated"); // Enviamos un mensaje simple
+    }
+  });
+}
 
 // --- GUARDIÁN DE AUTENTICACIÓN POR TOKEN ---
 const checkAdminAuth = (req, res, next) => {
@@ -52,6 +84,7 @@ app.post("/api/bookings", (req, res) => {
   const params = [checkIn, checkOut, "confirmed", stripePaymentId];
   db.run(sql, params, function (err) {
     if (err) return res.status(500).json({ error: err.message });
+    broadcastAdminUpdate();
     res.status(201).json({
       message: "Booking created successfully",
       bookingId: this.lastID,
@@ -137,12 +170,11 @@ app.delete("/api/admin/bookings/:id", checkAdminAuth, (req, res) => {
   const sql = `DELETE FROM bookings WHERE id = ?`;
   db.run(sql, [req.params.id], function (err) {
     if (err) return res.status(500).json({ error: err.message });
+    broadcastAdminUpdate();
     res.json({ message: "Booking deleted permanently", changes: this.changes });
   });
 });
 
-// Ya no necesitamos la ruta protegida para admin.html, el frontend se encarga de eso.
-
-app.listen(PORT, () => {
-  console.log(`Servidor corriendo en el puerto ${PORT}`);
+server.listen(PORT, () => {
+  console.log(`Servidor y WebSocket corriendo en el puerto ${PORT}`);
 });

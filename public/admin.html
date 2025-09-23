@@ -137,9 +137,8 @@
     </div>
 
     <script>
-      // public/admin.html -> <script>
-
       document.addEventListener("DOMContentLoaded", () => {
+        // --- PARTE 1: VERIFICACIÓN Y REFERENCIAS (se mantiene igual) ---
         const token = localStorage.getItem("adminToken");
         if (!token) {
           window.location.href = "/login.html";
@@ -151,6 +150,34 @@
         const noActiveMsg = document.getElementById("no-active-bookings");
         const noPastMsg = document.getElementById("no-past-bookings");
 
+        // --- PARTE 2: NUEVA LÓGICA DE WEBSOCKETS (se añade aquí) ---
+        // Construimos la URL del WebSocket. 'wss' es para producción (HTTPS), 'ws' para local (HTTP).
+        const wsProtocol = window.location.protocol === "https:" ? "wss" : "ws";
+        const wsUrl = `${wsProtocol}://${window.location.host}`;
+        const socket = new WebSocket(wsUrl);
+
+        // Escuchamos mensajes del servidor
+        socket.addEventListener("message", (event) => {
+          // Si el servidor nos dice que las reservas han cambiado...
+          if (event.data === "bookings_updated") {
+            console.log("Update received from server. Refreshing bookings...");
+            // ...volvemos a cargar los datos sin necesidad de recargar la página.
+            fetchAndRenderBookings();
+          }
+        });
+
+        socket.addEventListener("open", () => {
+          console.log("WebSocket connection established.");
+        });
+
+        socket.addEventListener("close", () => {
+          console.log(
+            "WebSocket connection closed. Attempting to reconnect..."
+          );
+          // Podríamos añadir lógica de reconexión aquí si fuera necesario
+        });
+
+        // --- PARTE 3: FUNCIONES DE AYUDA (se mantienen igual) ---
         async function fetchWithAuth(url, options = {}) {
           const headers = {
             ...options.headers,
@@ -174,25 +201,30 @@
             new Date(booking.checkOut) < new Date();
 
           tr.innerHTML = `
-            <td>${booking.id}</td>
-            <td>${new Date(booking.checkIn).toLocaleDateString("en-US")}</td>
-            <td>${new Date(booking.checkOut).toLocaleDateString("en-US")}</td>
-            ${
-              isPastOrCancelled
-                ? `<td class="${statusClass}">${booking.bookingStatus}</td>`
-                : ""
-            }
-            <td class="actions-cell">
+                <td>${booking.id}</td>
+                <td>${new Date(booking.checkIn).toLocaleDateString(
+                  "en-US"
+                )}</td>
+                <td>${new Date(booking.checkOut).toLocaleDateString(
+                  "en-US"
+                )}</td>
                 ${
-                  booking.bookingStatus === "confirmed" && !isPastOrCancelled
-                    ? `<button class="btn-action btn-cancel" data-id="${booking.id}">Cancel</button>`
+                  isPastOrCancelled
+                    ? `<td class="${statusClass}">${booking.bookingStatus}</td>`
                     : ""
                 }
-                <button class="btn-action btn-delete" data-id="${
-                  booking.id
-                }">Delete</button>
-            </td>
-        `;
+                <td class="actions-cell">
+                    ${
+                      booking.bookingStatus === "confirmed" &&
+                      !isPastOrCancelled
+                        ? `<button class="btn-action btn-cancel" data-id="${booking.id}">Cancel</button>`
+                        : ""
+                    }
+                    <button class="btn-action btn-delete" data-id="${
+                      booking.id
+                    }">Delete</button>
+                </td>
+            `;
           return tr;
         }
 
@@ -224,6 +256,7 @@
           }
         }
 
+        // --- PARTE 4: LÓGICA DE CLICS EN BOTONES (se mantiene igual) ---
         document
           .querySelector(".admin-container")
           .addEventListener("click", async (e) => {
@@ -240,7 +273,8 @@
                 await fetchWithAuth(`/api/admin/bookings/${bookingId}/cancel`, {
                   method: "POST",
                 });
-                fetchAndRenderBookings(); // CORRECCIÓN: Llamada a la función correcta
+                // Ya no necesitamos llamar a fetchAndRenderBookings() aquí,
+                // porque el backend enviará un mensaje WebSocket y eso activará la actualización.
               }
             }
 
@@ -253,11 +287,12 @@
                 await fetchWithAuth(`/api/admin/bookings/${bookingId}`, {
                   method: "DELETE",
                 });
-                fetchAndRenderBookings(); // CORRECCIÓN: Llamada a la función correcta
+                // Lo mismo aquí, el WebSocket se encarga de la actualización.
               }
             }
           });
 
+        // --- PARTE 5: PUNTO DE ENTRADA (se mantiene igual) ---
         fetchAndRenderBookings();
       });
     </script>
