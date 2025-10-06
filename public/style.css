@@ -199,7 +199,7 @@ nav a:hover::after {
   justify-content: flex-end; /* Alineamos todo hacia abajo */
   align-items: center; /* Centramos horizontalmente */
   text-align: center;
-  padding-bottom: 0vh; /* Añadimos el espacio inferior aquí */
+  padding-bottom: 10vh; /* Añadimos el espacio inferior aquí */
   position: relative;
   color: #fff;
 }
@@ -231,17 +231,8 @@ nav a:hover::after {
 .hero .container {
   position: relative;
   z-index: 2;
-  width: 100%; /* Asegura que ocupe todo el ancho */
-  height: 100%; /* Asegura que ocupe toda la altura */
-
-  /* Usamos flexbox AQUÍ para controlar el contenido INTERNO */
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-end; /* Alinea el contenido (h1, h2, botones) hacia abajo */
-  align-items: center; /* Centra el contenido horizontalmente */
-
-  padding-bottom: 12vh; /* Margen inferior del 12% de la altura de la pantalla */
 }
+
 .hero h1 {
   font-size: 6.5rem;
   color: #fff;
@@ -633,8 +624,10 @@ footer p {
     font-size: 1.1rem;
   }
   .hero-actions {
-    flex-direction: column;
-    gap: 15px;
+    display: flex; /* Aseguramos que sea flex */
+    flex-direction: row; /* Lo forzamos a ser horizontal (aunque es el valor por defecto) */
+    gap: 10px; /* Reducimos el espacio entre botones */
+    width: 100%; /* Hacemos que el contenedor ocupe todo el ancho disponible */
   }
   section {
     padding: 60px 0;
@@ -648,5 +641,18 @@ footer p {
   }
   .contact-info {
     padding: 60px 20px;
+  }
+
+  .hero-actions .btn {
+    padding: 15px 10px; /* Hacemos los botones menos altos y anchos */
+    font-size: 0.8rem; /* Reducimos el tamaño de la letra */
+    letter-spacing: 1px;
+    flex-grow: 1; /* ¡La clave! Ambos botones intentarán crecer para ocupar el espacio */
+    flex-basis: 0; /* Asegura que la distribución del espacio sea equitativa */
+  }
+
+  /* Hacemos que el botón primario sea un poco más grande */
+  .hero-actions .btn-primary {
+    flex-grow: 1.5; /* Le damos más "peso" al botón de la galería para que sea más grande */
   }
 }
