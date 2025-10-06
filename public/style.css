@@ -4,7 +4,7 @@
 @import url("https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Montserrat:wght@400;500;700&display=swap");
 
 :root {
-  --color-primary: #2fafc5;
+  --color-primary: #6adaee;
   --color-background: #cee6f0;
   --color-surface: #ffffff;
   --color-text-primary: #6d6875;
@@ -30,6 +30,7 @@ html {
   scroll-behavior: smooth;
 }
 
+/*Amenites*/
 body {
   font-family: var(--font-body);
   line-height: 1.8;
@@ -43,6 +44,8 @@ body {
   max-width: 1200px;
   margin: 0 auto;
 }
+
+/*Bienvenida*/
 h1,
 h2,
 h3 {
@@ -80,8 +83,8 @@ section > .container > p {
 .btn {
   display: inline-block;
   padding: 16px 40px;
-  border-radius: var(--border-radius);
-  font-weight: 700;
+  border-radius: 0px;
+  font-weight: 550;
   font-family: var(--font-body);
   text-transform: uppercase;
   letter-spacing: 1.5px;
@@ -90,11 +93,12 @@ section > .container > p {
   border: 2px solid transparent;
 }
 .btn-primary {
-  background-color: var(--color-primary);
+  background-color: transparent;
   color: #fff;
+  border-color: #fff;
 }
 .btn-primary:hover {
-  background-color: var(--color-surface);
+  background-color: #fff;
   color: var(--color-primary);
   border-color: var(--color-primary);
   transform: translateY(-5px);
@@ -114,7 +118,11 @@ section > .container > p {
 /* HEADER & NAVIGATION                           */
 /* ============================================= */
 header {
-  background-color: transparent;
+  background: linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0.486) 0%,
+    rgba(0, 0, 0, 0) 100%
+  );
   position: fixed;
   top: 0;
   left: 0;
@@ -123,10 +131,10 @@ header {
   transition: background-color 0.4s ease, box-shadow 0.4s ease;
 }
 header.scrolled {
-  background-color: rgba(255, 255, 255, 0.9);
+  background-color: rgba(44, 43, 43, 0.315);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
-  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0);
 }
 nav {
   display: flex;
@@ -138,11 +146,11 @@ nav {
   font-family: var(--font-heading);
   font-weight: 700;
   font-size: 1.5rem;
-  color: var(--color-text-primary);
+  color: #fff;
 }
 
 .nav-brand:hover {
-  color: var(--color-primary);
+  color: #fff;
 }
 
 nav ul {
@@ -152,7 +160,7 @@ nav ul {
   align-items: center;
 }
 nav a {
-  color: var(--color-text-primary);
+  color: rgba(255, 255, 255, 0.9);
   font-weight: 500;
   font-family: var(--font-body);
   font-size: 1rem;
@@ -174,8 +182,11 @@ nav a:hover::after {
 }
 
 .nav-btn {
+  background-color: rgba(255, 255, 255, 0);
+  border-color: rgba(255, 255, 255, 0.9);
+  font-weight: 2500;
   padding: 10px 25px;
-  border-radius: 50px;
+  border-radius: 0px;
 }
 
 /* ============================================= */
@@ -183,13 +194,13 @@ nav a:hover::after {
 /* ============================================= */
 .hero {
   min-height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  display: flex; /* Mantenemos flex */
+  flex-direction: column; /* Lo hacemos explícitamente vertical */
+  justify-content: flex-end; /* Alineamos todo hacia abajo */
+  align-items: center; /* Centramos horizontalmente */
   text-align: center;
+  padding-bottom: 0vh; /* Añadimos el espacio inferior aquí */
   position: relative;
-  background-size: cover;
-  background-position: center;
   color: #fff;
 }
 .hero-video-wrapper {
@@ -220,7 +231,16 @@ nav a:hover::after {
 .hero .container {
   position: relative;
   z-index: 2;
-  padding-top: 100px;
+  width: 100%; /* Asegura que ocupe todo el ancho */
+  height: 100%; /* Asegura que ocupe toda la altura */
+
+  /* Usamos flexbox AQUÍ para controlar el contenido INTERNO */
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end; /* Alinea el contenido (h1, h2, botones) hacia abajo */
+  align-items: center; /* Centra el contenido horizontalmente */
+
+  padding-bottom: 12vh; /* Margen inferior del 12% de la altura de la pantalla */
 }
 .hero h1 {
   font-size: 6.5rem;
