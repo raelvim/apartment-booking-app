@@ -434,6 +434,7 @@ nav a:hover::after {
 
 /* Botón de reserva */
 #booking-summary .btn {
+  color: #fa0000
   width: 100%; /* El botón ocupa todo el ancho */
   padding: 18px; /* Botón más grande */
   font-size: 1rem;
