@@ -434,7 +434,6 @@ nav a:hover::after {
 
 /* Botón de reserva */
 #booking-summary .btn {
-  color: #fa0000
   width: 100%; /* El botón ocupa todo el ancho */
   padding: 18px; /* Botón más grande */
   font-size: 1rem;
@@ -569,7 +568,7 @@ footer p {
   display: none; /* Ocultos por defecto en escritorio */
   cursor: pointer;
   font-size: 1.5rem;
-  color: var(--color-text-primary);
+  color: #fff;
 }
 
 .nav-menu-mobile {
