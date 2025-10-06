@@ -30,7 +30,9 @@
     <header>
       <nav class="container">
         <a href="#home" class="nav-brand">Lakeside Serenity</a>
-        <ul>
+
+        <!-- Menú de escritorio (se ocultará en móvil) -->
+        <ul class="nav-menu-desktop">
           <li><a href="#about">About</a></li>
           <li><a href="#amenities">Amenities</a></li>
           <li><a href="#gallery">Gallery</a></li>
@@ -39,6 +41,24 @@
             <a href="#contact" class="btn btn-primary nav-btn">Reserve Now</a>
           </li>
         </ul>
+
+        <!-- NUEVO: Botón de Hamburguesa (solo visible en móvil) -->
+        <div class="nav-toggle" id="nav-toggle">
+          <i class="fas fa-bars"></i>
+        </div>
+
+        <!-- NUEVO: Menú Desplegable Móvil (oculto por defecto) -->
+        <div class="nav-menu-mobile" id="nav-menu-mobile">
+          <ul class="nav-list-mobile">
+            <li><a href="#about" class="nav-link-mobile">About</a></li>
+            <li><a href="#amenities" class="nav-link-mobile">Amenities</a></li>
+            <li><a href="#gallery" class="nav-link-mobile">Gallery</a></li>
+            <li><a href="#location" class="nav-link-mobile">Location</a></li>
+          </ul>
+          <div class="nav-close" id="nav-close">
+            <i class="fas fa-times"></i>
+          </div>
+        </div>
       </nav>
     </header>
 
@@ -472,6 +492,31 @@
 
           initializeCalendar();
         }
+        // --- NUEVO: LÓGICA DEL MENÚ HAMBURGUESA ---
+        const navMenu = document.getElementById("nav-menu-mobile");
+        const navToggle = document.getElementById("nav-toggle");
+        const navClose = document.getElementById("nav-close");
+        const navLinks = document.querySelectorAll(".nav-link-mobile");
+
+        // Función para mostrar el menú
+        if (navToggle) {
+          navToggle.addEventListener("click", () => {
+            navMenu.classList.add("show-menu");
+          });
+        }
+
+        // Función para ocultar el menú
+        if (navClose) {
+          navClose.addEventListener("click", () => {
+            navMenu.classList.remove("show-menu");
+          });
+        }
+        // Función para cerrar el menú al hacer clic en un enlace
+        navLinks.forEach((link) => {
+          link.addEventListener("click", () => {
+            navMenu.classList.remove("show-menu");
+          });
+        });
       });
     </script>
   </body>
