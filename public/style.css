@@ -687,8 +687,23 @@ footer p {
     font-size: 2rem;
   }
   .amenities-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 15px;
   }
+  .amenity-item {
+    padding: 15px; /* Reducir el padding de los ítems */
+    font-size: 0.9rem; /* Reducir el tamaño de la fuente */
+    gap: 10px; /* Reducir el espacio entre el icono y el texto */
+    flex-direction: column; /* Colocar icono y texto en columna */
+    text-align: center; /* Centrar el texto */
+    justify-content: center; /* Centrar verticalmente */
+  }
+
+  .amenity-item i {
+    font-size: 1.5rem; /* Reducir el tamaño del icono */
+    margin-bottom: 5px; /* Espacio entre el icono y el texto */
+  }
+
   .contact-info {
     padding: 60px 20px;
   }
