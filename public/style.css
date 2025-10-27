@@ -362,6 +362,139 @@ nav a:hover::after {
 }
 
 /* ============================================= */
+/* REVIEWS SECTION                               */
+/* ============================================= */
+#reviews {
+  scroll-margin-top: 90px;
+  background-color: var(
+    --color-background
+  ); /* O tu color de fondo claro preferido */
+  padding-bottom: 60px; /* Un poco menos de padding inferior */
+}
+
+.reviews-section .section-title {
+  color: var(--color-text-primary);
+  text-shadow: none;
+}
+
+.reviews-section > .container > p {
+  margin-bottom: 3rem;
+}
+
+/* Swiper específico para las reseñas */
+.reviewsSwiper {
+  width: 100%;
+  padding-top: 50px;
+  padding-bottom: 50px;
+  height: auto; /* Altura automática para que se ajuste al contenido */
+}
+
+.review-slide {
+  background-color: var(--color-surface);
+  border-radius: var(--border-radius);
+  box-shadow: var(--shadow);
+  width: 300px; /* Ancho base de cada slide */
+  min-height: 400px; /* Altura mínima para mantener uniformidad */
+  overflow: hidden;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end; /* Alinea el contenido hacia abajo */
+}
+
+.review-slide img {
+  width: 100%;
+  height: 100%; /* La imagen llenará el slide */
+  object-fit: cover;
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 0;
+}
+
+.review-overlay {
+  position: relative; /* Para que el contenido esté sobre la imagen */
+  z-index: 1;
+  background: linear-gradient(
+    to top,
+    rgba(0, 0, 0, 0.8),
+    rgba(0, 0, 0, 0) 50%
+  ); /* Degradado oscuro en la parte inferior */
+  color: #fff;
+  padding: 30px;
+  padding-top: 80px; /* Más espacio arriba para el degradado */
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  height: 100%; /* Ocupa toda la altura para que el degradado sea efectivo */
+}
+
+.review-overlay h3 {
+  font-family: var(--font-heading);
+  font-size: 1.4rem;
+  margin-bottom: 10px;
+  color: #fff;
+}
+
+.review-overlay p {
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+  line-height: 1.6;
+  margin-bottom: 15px;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.review-overlay span {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.review-icon {
+  font-size: 2.5rem;
+  color: var(--color-primary); /* Icono de Airbnb con el color primario */
+  margin-bottom: 20px;
+  opacity: 0.8;
+}
+
+/* Navegación del Swiper para Reseñas */
+.reviewsSwiper .swiper-button-next,
+.reviewsSwiper .swiper-button-prev {
+  color: var(--color-primary) !important;
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+}
+
+/* Paginación del Swiper para Reseñas */
+.reviewsSwiper .swiper-pagination-bullet-active {
+  background: var(--color-primary) !important;
+}
+
+/* Botón "Ver más reseñas" */
+.view-more-reviews {
+  text-align: center;
+  margin-top: 40px;
+}
+
+.view-more-reviews .btn-secondary {
+  background-color: var(--color-primary);
+  color: #fff;
+  border: 2px solid var(--color-primary);
+  padding: 14px 30px;
+  border-radius: 50px; /* Botón más redondeado */
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.view-more-reviews .btn-secondary:hover {
+  background-color: #5ac4dd; /* Un tono un poco más oscuro */
+  color: #fff;
+  transform: translateY(-3px);
+  box-shadow: 0 8px 15px rgba(0, 0, 0, 0.2);
+}
+
+/* ============================================= */
 /* RESERVATION SECTION (REDESIGNED)              */
 /* ============================================= */
 .reservation-section {
@@ -728,5 +861,38 @@ footer p {
   /* MOSTRAMOS el botón de la hamburguesa */
   .nav-toggle {
     display: block;
+  }
+
+  .reviewsSwiper {
+    padding-top: 30px;
+    padding-bottom: 30px;
+  }
+
+  .review-slide {
+    width: 280px; /* Ancho más pequeño en móvil */
+    min-height: 380px;
+  }
+
+  .review-overlay {
+    padding: 20px;
+    padding-top: 60px;
+  }
+
+  .review-overlay h3 {
+    font-size: 1.2rem;
+  }
+
+  .review-overlay p {
+    font-size: 0.85rem;
+  }
+
+  .review-icon {
+    font-size: 2rem;
+    margin-bottom: 15px;
+  }
+
+  .view-more-reviews .btn-secondary {
+    padding: 12px 25px;
+    font-size: 0.85rem;
   }
 }
