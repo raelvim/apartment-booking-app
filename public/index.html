@@ -37,6 +37,7 @@
           <li><a href="#amenities">Amenities</a></li>
           <li><a href="#gallery">Gallery</a></li>
           <li><a href="#location">Location</a></li>
+          <li><a href="#reviews">Reviews</a></li>
           <li>
             <a href="#contact" class="btn btn-primary nav-btn">Reserve Now</a>
           </li>
@@ -54,6 +55,9 @@
             <li><a href="#amenities" class="nav-link-mobile">Amenities</a></li>
             <li><a href="#gallery" class="nav-link-mobile">Gallery</a></li>
             <li><a href="#location" class="nav-link-mobile">Location</a></li>
+            <li>
+              <a href="#reviews" class="nav-link-mobile">Reviews</a>
+            </li>
           </ul>
           <div class="nav-close" id="nav-close">
             <i class="fas fa-times"></i>
@@ -244,7 +248,7 @@
           <h2 class="section-title">Prime Location</h2>
           <div class="map-container" data-aos="fade-up">
             <iframe
-              src="https://www.google.com/maps/embed?pb=..."
+              src="https://www.google.com/maps/place/Davidson+Landing+Community/@35.5061294,-80.8719638,17.5z/data=!4m6!3m5!1s0x8856abb8f2866699:0xa188a138ecad93e1!8m2!3d35.506134!4d-80.8702468!16s%2Fg%2F1tg35y71?entry=ttu&g_ep=EgoyMDI1MTAyMi4wIKXMDSoASAFQAw%3D%3D"
               width="100%"
               height="450"
               style="border: 0"
@@ -255,7 +259,79 @@
         </div>
       </section>
 
-      <!-- RESERVATION SECTION (ESTRUCTURA CORREGIDA) -->
+      <section id="reviews" class="reviews-section">
+        <div class="container">
+          <h2 class="section-title">What Our Guests Say</h2>
+          <p>
+            Don't just take our word for it! Here are some of the wonderful
+            things our guests have shared about their stay.
+          </p>
+
+          <div class="swiper reviewsSwiper" data-aos="fade-up">
+            <div class="swiper-wrapper">
+              <!-- Ejemplo de Review 1 -->
+              <div class="swiper-slide review-slide">
+                <img src="images/review1.jpg" alt="Guest review from Airbnb" />
+                <div class="review-overlay">
+                  <i class="fab fa-airbnb review-icon"></i>
+                  <h3>"Absolutely perfect!"</h3>
+                  <p>
+                    "The place was spotless and had everything we needed. The
+                    lake view from the deck was breathtaking. We can't wait to
+                    come back!"
+                  </p>
+                  <span>- Happy Traveler, March 2024</span>
+                </div>
+              </div>
+
+              <!-- Ejemplo de Review 2 -->
+              <div class="swiper-slide review-slide">
+                <img src="images/review2.jpg" alt="Guest review from Airbnb" />
+                <div class="review-overlay">
+                  <i class="fab fa-airbnb review-icon"></i>
+                  <h3>"A true gem!"</h3>
+                  <p>
+                    "This rental exceeded our expectations. Close to charming
+                    Davidson and a quick drive to Charlotte. Highly recommend!"
+                  </p>
+                  <span>- Family Vacationers, February 2024</span>
+                </div>
+              </div>
+
+              <!-- Ejemplo de Review 3 -->
+              <div class="swiper-slide review-slide">
+                <img src="images/review3.jpg" alt="Guest review from Airbnb" />
+                <div class="review-overlay">
+                  <i class="fab fa-airbnb review-icon"></i>
+                  <h3>"Peaceful and serene"</h3>
+                  <p>
+                    "Just what we needed for a relaxing getaway. The hosts were
+                    incredibly responsive. Five stars!"
+                  </p>
+                  <span>- Weekend Escapers, January 2024</span>
+                </div>
+              </div>
+
+              <!-- Agrega más slides de reseña según necesites (review4.jpg, etc.) -->
+            </div>
+            <!-- Add Pagination -->
+            <div class="swiper-pagination"></div>
+            <!-- Add Navigation -->
+            <div class="swiper-button-next"></div>
+            <div class="swiper-button-prev"></div>
+          </div>
+
+          <div class="view-more-reviews">
+            <a
+              href="https://www.airbnb.com.ec/rooms/732102319759567131?viralityEntryPoint=1&s=76&_set_bev_on_new_domain=1761410183_EAYzYyYjgyN2MxYW&source_impression_id=p3_1761586481_P3S3SGED0Ux4sxro"
+              target="_blank"
+              class="btn btn-secondary"
+              >View All Reviews on Airbnb</a
+            >
+          </div>
+        </div>
+      </section>
+
       <section id="contact" class="reservation-section">
         <div class="container">
           <h2 class="section-title">Ready to Book Your Stay?</h2>
@@ -273,7 +349,6 @@
                 readonly="readonly"
               />
 
-              <!-- ESTA ES LA ESTRUCTURA QUE SE HABÍA PERDIDO -->
               <div id="booking-summary" class="booking-summary-hidden">
                 <div class="summary-item">
                   <span
