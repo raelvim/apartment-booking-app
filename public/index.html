@@ -392,6 +392,45 @@
           });
         }
 
+        const reviewsSwiperEl = document.querySelector(".reviewsSwiper");
+        if (reviewsSwiperEl) {
+          new Swiper(reviewsSwiperEl, {
+            loop: true,
+            effect: "coverflow",
+            grabCursor: true,
+            centeredSlides: true,
+            // Ajustar slidesPerView para que siempre haya algo que swiper, incluso con pocos slides
+            // En móvil, muestra 1 slide y permite el swipe.
+            // En escritorio, muestra 2 o 3 para un efecto más inmersivo.
+            slidesPerView: 1.2, // Ajusta para mostrar un poco del siguiente slide
+            spaceBetween: 20, // Aumenta el espacio entre las slides
+            coverflowEffect: {
+              rotate: 50,
+              stretch: 0,
+              depth: 100,
+              modifier: 1,
+              slideShadows: true,
+            },
+            pagination: { el: ".swiper-pagination", clickable: true },
+            navigation: {
+              nextEl: ".reviewsSwiper .swiper-button-next", // Especificar selector para evitar conflicto
+              prevEl: ".reviewsSwiper .swiper-button-prev", // con el Swiper de galería
+            },
+            breakpoints: {
+              768: {
+                // Para tablets y escritorios
+                slidesPerView: 2.2, // Ajusta para ver 2 y un poco del tercero
+                spaceBetween: 30, // Espacio entre slides en tablets
+              },
+              1024: {
+                // Para escritorios grandes
+                slidesPerView: 3.2, // Ajusta para ver 3 y un poco del cuarto
+                spaceBetween: 40, // Espacio entre slides en escritorios
+              },
+            },
+          });
+        }
+
         // --- SISTEMA DE RESERVAS ---
         const calendarInput = document.querySelector("#date-picker");
         if (calendarInput) {
