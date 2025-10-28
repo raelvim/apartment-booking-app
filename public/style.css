@@ -482,6 +482,7 @@ nav a:hover::after {
 
 .airbnb-redirect-btn:hover {
   background-color: #5ac4dd; /* Un tono un poco más oscuro o diferente al hacer hover */
+  color: #ffffff;
   border-color: #5ac4dd;
   transform: translateY(-5px);
   box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
@@ -690,7 +691,8 @@ footer p {
   /* Media Queries para el botón de Airbnb */
   .airbnb-redirect-btn {
     width: 90%; /* Que ocupe más espacio en móviles */
-    max-width: 350px; /* Limita el ancho máximo */
+    max-width: 300px; /* Limita el ancho máximo */
+    text-align: center;
     padding: 15px 25px;
     font-size: 0.9rem;
   }
