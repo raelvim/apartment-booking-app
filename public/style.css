@@ -691,7 +691,7 @@ footer p {
   /* Media Queries para el botón de Airbnb */
   .airbnb-redirect-btn {
     width: 90%; /* Que ocupe más espacio en móviles */
-    max-width: 200px; /* Limita el ancho máximo */
+    max-width: 250px; /* Limita el ancho máximo */
     text-align: center;
     padding: 15px 25px;
     font-size: 0.9rem;
