@@ -431,37 +431,153 @@
           });
         }
 
-        <!-- RESERVATION SECTION -->
-      <section id="contact" class="reservation-section">
-        <div class="container">
-          <h2 class="section-title">Ready to Book Your Stay?</h2>
-          <p>
-            You can view availability and book your stay directly on Airbnb.
-            Click the button below to reserve your dates!
-          </p>
-          <form id="booking-form">
-            <div class="booking-widget">
+        // --- SISTEMA DE RESERVAS ---
+        const calendarInput = document.querySelector("#date-picker");
+        if (calendarInput) {
+          const pricePerNight = 140;
+          const bookingSummaryEl = document.getElementById("booking-summary");
+          const nightCountEl = document.getElementById("night-count");
+          const pricePerNightEl = document.getElementById("price-per-night");
+          const subtotalPriceEl = document.getElementById("subtotal-price");
+          const totalPriceEl = document.getElementById("total-price");
+          const bookingForm = document.getElementById("booking-form");
+          let currentSelection = { checkIn: null, checkOut: null };
 
-              <input
-                type="text"
-                id="date-picker"
-                name="dates"
-                placeholder="Check availability on Airbnb..."
-                readonly="readonly"
-                disabled="disabled"
-                href="YOUR_AIRBNB_LISTING_URL"
-                target="_blank"
-                class="btn btn-primary btn-airbnb"
-                >Book Your Stay on Airbnb</a
-              >
+          async function initializeCalendar() {
+            try {
+              const response = await fetch("/api/bookings");
+              const bookedDates = await response.json();
 
-              <!-- EL BLOQUE #booking-summary HA SIDO ELIMINADO DE AQUÍ -->
-            </div>
-          </form>
-        </div>
-      </section>
+              flatpickr(calendarInput, {
+                mode: "range",
+                dateFormat: "Y-m-d",
+                minDate: "today",
+                disable: bookedDates,
 
+                disable: [
+                  function (date) {
+                    // Convierte la fecha actual del calendario a formato YYYY-MM-DD
+                    const dateStr =
+                      date.getFullYear() +
+                      "-" +
+                      ("0" + (date.getMonth() + 1)).slice(-2) +
+                      "-" +
+                      ("0" + date.getDate()).slice(-2);
 
+                    // Revisa si la fecha está dentro de algún rango reservado
+                    for (const range of bookedDates) {
+                      if (dateStr >= range.from && dateStr <= range.to) {
+                        return true; // Si está, deshabilítala (devuelve true)
+                      }
+                    }
+                    return false; // Si no, habilítala (devuelve false)
+                  },
+                ],
+
+                onClose: function (selectedDates) {
+                  if (selectedDates.length === 2) {
+                    const checkIn = selectedDates[0];
+                    const checkOut = selectedDates[1];
+                    const nights = Math.ceil(
+                      (checkOut - checkIn) / (1000 * 3600 * 24)
+                    );
+
+                    if (nights > 0) {
+                      currentSelection.checkIn = checkIn
+                        .toISOString()
+                        .split("T")[0];
+                      currentSelection.checkOut = checkOut
+                        .toISOString()
+                        .split("T")[0];
+
+                      pricePerNightEl.textContent = pricePerNight;
+                      nightCountEl.textContent = nights;
+                      const subtotal = nights * pricePerNight;
+                      subtotalPriceEl.textContent = `$${subtotal}`;
+                      totalPriceEl.textContent = `$${subtotal}`; // Asumiendo que no hay otros cargos
+
+                      bookingSummaryEl.classList.remove(
+                        "booking-summary-hidden"
+                      );
+                    }
+                  } else {
+                    bookingSummaryEl.classList.add("booking-summary-hidden");
+                  }
+                },
+              });
+              calendarInput.placeholder = "Select your dates...";
+            } catch (error) {
+              console.error("Error loading booking dates:", error);
+              calendarInput.placeholder =
+                "Error loading dates. Please refresh.";
+            }
+          }
+
+          bookingForm.addEventListener("submit", async (event) => {
+            event.preventDefault();
+            const submitButton = bookingForm.querySelector("button");
+            submitButton.disabled = true;
+            submitButton.textContent = "Redirecting to payment...";
+
+            if (!currentSelection.checkIn || !currentSelection.checkOut) {
+              alert("Please select a valid date range first.");
+              submitButton.disabled = false;
+              submitButton.textContent = "Request to Book";
+              return;
+            }
+
+            const nights = Math.ceil(
+              (new Date(currentSelection.checkOut) -
+                new Date(currentSelection.checkIn)) /
+                (1000 * 3600 * 24)
+            );
+
+            try {
+              const response = await fetch("/api/create-checkout-session", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  nights: nights,
+                  pricePerNight: pricePerNight,
+                  checkIn: currentSelection.checkIn,
+                  checkOut: currentSelection.checkOut,
+                }),
+              });
+              const session = await response.json();
+
+              if (session.error) {
+                throw new Error(session.error.message);
+              }
+
+              // PASO 2: Guardar las fechas temporalmente en el navegador
+
+              localStorage.setItem(
+                "pending_booking_checkIn",
+                currentSelection.checkIn
+              );
+              localStorage.setItem(
+                "pending_booking_checkOut",
+                currentSelection.checkOut
+              );
+
+              // PASO 3: Redirigir al usuario a la página de pago de Stripe
+              const result = await stripe.redirectToCheckout({
+                sessionId: session.id,
+              });
+
+              if (result.error) {
+                throw new Error(result.error.message);
+              }
+            } catch (error) {
+              console.error("Error initiating payment:", error);
+              alert("There was an error. Please try again.");
+              submitButton.disabled = false;
+              submitButton.textContent = "Request to Book";
+            }
+          });
+
+          initializeCalendar();
+        }
         // --- NUEVO: LÓGICA DEL MENÚ HAMBURGUESA ---
         const navMenu = document.getElementById("nav-menu-mobile");
         const navToggle = document.getElementById("nav-toggle");
