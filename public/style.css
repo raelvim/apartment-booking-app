@@ -498,7 +498,7 @@ nav a:hover::after {
 /* RESERVATION SECTION (REDESIGNED)              */
 /* ============================================= */
 .reservation-section {
-  background-color: var(--color-surfac);
+  background-color: #ffffff;
   text-align: center;
   padding: 100px 0;
 }
@@ -896,6 +896,8 @@ footer p {
     font-size: 0.85rem;
   }
 }
+
+/*AIRBNB*/
 
 /* Ocultar el botón original */
 .hidden-button {
