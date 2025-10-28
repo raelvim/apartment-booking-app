@@ -17,10 +17,7 @@
       rel="stylesheet"
       href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css"
     />
-    <link
-      rel="stylesheet"
-      href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css"
-    />
+    <!-- Eliminado: <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css" /> -->
     <link rel="stylesheet" href="https://unpkg.com/aos@next/dist/aos.css" />
 
     <!-- Tu Hoja de Estilos -->
@@ -308,37 +305,11 @@
         <div class="container">
           <h2 class="section-title">Ready to Book Your Stay?</h2>
           <p>
-            Use the calendar below to select your check-in and check-out dates.
-            Our system will calculate the total for your stay.
+            Check availability and book your unforgettable stay directly on
+            Airbnb!
           </p>
-          <form id="booking-form">
-            <div class="booking-widget">
-              <input
-                type="text"
-                id="date-picker"
-                name="dates"
-                placeholder="Loading available dates..."
-                readonly="readonly"
-              />
-
-              <div id="booking-summary" class="btn btn-primary hidden-button">
-                <div class="summary-item">
-                  <span
-                    >$<span id="price-per-night">150</span> x
-                    <span id="night-count">0</span> nights</span
-                  >
-                  <span id="subtotal-price">$0</span>
-                </div>
-                <div class="summary-total">
-                  <span>Total</span>
-                  <span id="total-price">$0</span>
-                </div>
-                <button type="submit" class="btn btn-primary hidden-button">
-                  Request to Book
-                </button>
-              </div>
-            </div>
-          </form>
+          <!-- Eliminado: form id="booking-form" y todo su contenido -->
+          <!-- Ahora solo tendremos el botón de Airbnb -->
           <div class="airbnb-button-wrapper">
             <a
               href="https://www.airbnb.com.ec/rooms/732102319759567131?viralityEntryPoint=1&s=76&_set_bev_on_new_domain=1761410183_EAYzYyYjgyN2MxYW&source_impression_id=p3_1761586481_P3S3SGED0Ux4sxro#availability-calendar"
@@ -362,16 +333,12 @@
 
     <!-- SCRIPTS -->
     <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <!-- Eliminado: <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script> -->
     <script src="https://unpkg.com/aos@next/dist/aos.js"></script>
-    <script src="https://js.stripe.com/v3/"></script>
+    <!-- Eliminado: <script src="https://js.stripe.com/v3/"></script> -->
 
     <script>
       document.addEventListener("DOMContentLoaded", () => {
-        // --- INICIALIZACIÓN CON STRIPE ---
-        const stripe = Stripe(
-          "pk_test_51SAEbmGtWaCmr4GY08ZH8Drdy2yodu45r54CO0EJtxtWbrq1oqrR7Iv9Yj4v8xghmdhvFxCg5MtEwDToGZxXGqr300AW9Kr4hH"
-        );
         // --- INICIALIZACIÓN GENERAL ---
         const yearSpan = document.getElementById("year");
         if (yearSpan) {
@@ -407,11 +374,8 @@
             effect: "coverflow",
             grabCursor: true,
             centeredSlides: true,
-            // Ajustar slidesPerView para que siempre haya algo que swiper, incluso con pocos slides
-            // En móvil, muestra 1 slide y permite el swipe.
-            // En escritorio, muestra 2 o 3 para un efecto más inmersivo.
-            slidesPerView: 1.2, // Ajusta para mostrar un poco del siguiente slide
-            spaceBetween: 20, // Aumenta el espacio entre las slides
+            slidesPerView: 1.2,
+            spaceBetween: 20,
             coverflowEffect: {
               rotate: 50,
               stretch: 0,
@@ -421,172 +385,25 @@
             },
             pagination: { el: ".swiper-pagination", clickable: true },
             navigation: {
-              nextEl: ".reviewsSwiper .swiper-button-next", // Especificar selector para evitar conflicto
-              prevEl: ".reviewsSwiper .swiper-button-prev", // con el Swiper de galería
+              nextEl: ".reviewsSwiper .swiper-button-next",
+              prevEl: ".reviewsSwiper .swiper-button-prev",
             },
             breakpoints: {
               768: {
-                // Para tablets y escritorios
-                slidesPerView: 2.2, // Ajusta para ver 2 y un poco del tercero
-                spaceBetween: 30, // Espacio entre slides en tablets
+                slidesPerView: 2.2,
+                spaceBetween: 30,
               },
               1024: {
-                // Para escritorios grandes
-                slidesPerView: 3.2, // Ajusta para ver 3 y un poco del cuarto
-                spaceBetween: 40, // Espacio entre slides en escritorios
+                slidesPerView: 3.2,
+                spaceBetween: 40,
               },
             },
           });
         }
 
-        // --- SISTEMA DE RESERVAS ---
-        const calendarInput = document.querySelector("#date-picker");
-        if (calendarInput) {
-          const pricePerNight = 140;
-          const bookingSummaryEl = document.getElementById("booking-summary");
-          const nightCountEl = document.getElementById("night-count");
-          const pricePerNightEl = document.getElementById("price-per-night");
-          const subtotalPriceEl = document.getElementById("subtotal-price");
-          const totalPriceEl = document.getElementById("total-price");
-          const bookingForm = document.getElementById("booking-form");
-          let currentSelection = { checkIn: null, checkOut: null };
+        // --- ELIMINADO: Lógica del sistema de reservas y Flatpickr ---
 
-          async function initializeCalendar() {
-            try {
-              const response = await fetch("/api/bookings");
-              const bookedDates = await response.json();
-
-              flatpickr(calendarInput, {
-                mode: "range",
-                dateFormat: "Y-m-d",
-                minDate: "today",
-                disable: bookedDates,
-
-                disable: [
-                  function (date) {
-                    // Convierte la fecha actual del calendario a formato YYYY-MM-DD
-                    const dateStr =
-                      date.getFullYear() +
-                      "-" +
-                      ("0" + (date.getMonth() + 1)).slice(-2) +
-                      "-" +
-                      ("0" + date.getDate()).slice(-2);
-
-                    // Revisa si la fecha está dentro de algún rango reservado
-                    for (const range of bookedDates) {
-                      if (dateStr >= range.from && dateStr <= range.to) {
-                        return true; // Si está, deshabilítala (devuelve true)
-                      }
-                    }
-                    return false; // Si no, habilítala (devuelve false)
-                  },
-                ],
-
-                onClose: function (selectedDates) {
-                  if (selectedDates.length === 2) {
-                    const checkIn = selectedDates[0];
-                    const checkOut = selectedDates[1];
-                    const nights = Math.ceil(
-                      (checkOut - checkIn) / (1000 * 3600 * 24)
-                    );
-
-                    if (nights > 0) {
-                      currentSelection.checkIn = checkIn
-                        .toISOString()
-                        .split("T")[0];
-                      currentSelection.checkOut = checkOut
-                        .toISOString()
-                        .split("T")[0];
-
-                      pricePerNightEl.textContent = pricePerNight;
-                      nightCountEl.textContent = nights;
-                      const subtotal = nights * pricePerNight;
-                      subtotalPriceEl.textContent = `$${subtotal}`;
-                      totalPriceEl.textContent = `$${subtotal}`; // Asumiendo que no hay otros cargos
-
-                      bookingSummaryEl.classList.remove(
-                        "booking-summary-hidden"
-                      );
-                    }
-                  } else {
-                    bookingSummaryEl.classList.add("booking-summary-hidden");
-                  }
-                },
-              });
-              calendarInput.placeholder = "Select your dates...";
-            } catch (error) {
-              console.error("Error loading booking dates:", error);
-              calendarInput.placeholder =
-                "Error loading dates. Please refresh.";
-            }
-          }
-
-          bookingForm.addEventListener("submit", async (event) => {
-            event.preventDefault();
-            const submitButton = bookingForm.querySelector("button");
-            submitButton.disabled = true;
-            submitButton.textContent = "Redirecting to payment...";
-
-            if (!currentSelection.checkIn || !currentSelection.checkOut) {
-              alert("Please select a valid date range first.");
-              submitButton.disabled = false;
-              submitButton.textContent = "Request to Book";
-              return;
-            }
-
-            const nights = Math.ceil(
-              (new Date(currentSelection.checkOut) -
-                new Date(currentSelection.checkIn)) /
-                (1000 * 3600 * 24)
-            );
-
-            try {
-              const response = await fetch("/api/create-checkout-session", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                  nights: nights,
-                  pricePerNight: pricePerNight,
-                  checkIn: currentSelection.checkIn,
-                  checkOut: currentSelection.checkOut,
-                }),
-              });
-              const session = await response.json();
-
-              if (session.error) {
-                throw new Error(session.error.message);
-              }
-
-              // PASO 2: Guardar las fechas temporalmente en el navegador
-
-              localStorage.setItem(
-                "pending_booking_checkIn",
-                currentSelection.checkIn
-              );
-              localStorage.setItem(
-                "pending_booking_checkOut",
-                currentSelection.checkOut
-              );
-
-              // PASO 3: Redirigir al usuario a la página de pago de Stripe
-              const result = await stripe.redirectToCheckout({
-                sessionId: session.id,
-              });
-
-              if (result.error) {
-                throw new Error(result.error.message);
-              }
-            } catch (error) {
-              console.error("Error initiating payment:", error);
-              alert("There was an error. Please try again.");
-              submitButton.disabled = false;
-              submitButton.textContent = "Request to Book";
-            }
-          });
-
-          initializeCalendar();
-        }
-        // --- NUEVO: LÓGICA DEL MENÚ HAMBURGUESA ---
+        // --- LÓGICA DEL MENÚ HAMBURGUESA ---
         const navMenu = document.getElementById("nav-menu-mobile");
         const navToggle = document.getElementById("nav-toggle");
         const navClose = document.getElementById("nav-close");
