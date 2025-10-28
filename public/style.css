@@ -498,7 +498,7 @@ nav a:hover::after {
 /* RESERVATION SECTION (REDESIGNED)              */
 /* ============================================= */
 .reservation-section {
-  background-color: #6298b7;
+  background-color: var(--color-surfac);
   text-align: center;
   padding: 100px 0;
 }
@@ -894,5 +894,60 @@ footer p {
   .view-more-reviews .btn-secondary {
     padding: 12px 25px;
     font-size: 0.85rem;
+  }
+}
+
+/* Ocultar el botón original */
+.hidden-button {
+  display: none !important;
+}
+
+/* Estilos para el nuevo botón de Airbnb */
+.airbnb-button-wrapper {
+  margin-top: 30px; /* Espacio entre el calendario/sumario y el nuevo botón */
+  text-align: center; /* Centrar el botón */
+}
+
+.airbnb-redirect-btn {
+  background-color: var(--color-primary); /* Usa tu color primario */
+  color: #fff;
+  border: 2px solid var(--color-primary);
+  padding: 18px 40px;
+  border-radius: 0px; /* Mantener tu estilo de botón */
+  font-size: 1rem;
+  font-weight: 550;
+  letter-spacing: 1.5px;
+  display: inline-flex; /* Para alinear el texto y el icono */
+  align-items: center;
+  gap: 10px; /* Espacio entre el texto y el icono */
+  transition: all 0.3s ease;
+}
+
+.airbnb-redirect-btn:hover {
+  background-color: #5ac4dd; /* Un tono un poco más oscuro o diferente al hacer hover */
+  border-color: #5ac4dd;
+  transform: translateY(-5px);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+}
+
+/* Ajustes para el formulario de reserva si el botón de Airbnb lo hace ver extraño */
+#booking-form {
+  display: flex; /* Permite que el contenido del formulario se alinee */
+  flex-direction: column; /* Apila los elementos verticalmente */
+  align-items: center; /* Centra el contenido del formulario */
+}
+
+/* Ajusta el espaciado del p que precede al formulario si es necesario */
+.reservation-section p {
+  margin-bottom: 2rem;
+}
+
+/* Media Queries para el botón de Airbnb */
+@media (max-width: 768px) {
+  .airbnb-redirect-btn {
+    width: 90%; /* Que ocupe más espacio en móviles */
+    max-width: 350px; /* Limita el ancho máximo */
+    padding: 15px 25px;
+    font-size: 0.9rem;
   }
 }
