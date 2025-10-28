@@ -498,7 +498,7 @@ nav a:hover::after {
 /* RESERVATION SECTION (REDESIGNED)              */
 /* ============================================= */
 .reservation-section {
-  background-color: var(--color-surface);
+  background-color: #6298b7;
   text-align: center;
   padding: 100px 0;
 }
