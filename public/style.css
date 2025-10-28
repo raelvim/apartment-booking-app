@@ -692,5 +692,6 @@ footer p {
     max-width: 350px; /* Limita el ancho máximo */
     padding: 15px 25px;
     font-size: 0.9rem;
+    text-align: center;
   }
 }
