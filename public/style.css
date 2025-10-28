@@ -1,5 +1,5 @@
 /* ============================================= */
-/* FONTS & GLOBAL VARIABLES - MODERN & WARM      */
+/* FONTS & GLOBAL VARIABLES - MODERN & WARM */
 /* ============================================= */
 @import url("https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Montserrat:wght@400;500;700&display=swap");
 
@@ -19,7 +19,7 @@
 }
 
 /* ============================================= */
-/* BASE & GLOBAL STYLES                          */
+/* BASE & GLOBAL STYLES */
 /* ============================================= */
 * {
   box-sizing: border-box;
@@ -115,7 +115,7 @@ section > .container > p {
 }
 
 /* ============================================= */
-/* HEADER & NAVIGATION                           */
+/* HEADER & NAVIGATION */
 /* ============================================= */
 header {
   background: linear-gradient(
@@ -190,7 +190,7 @@ nav a:hover::after {
 }
 
 /* ============================================= */
-/* HERO SECTION                                  */
+/* HERO SECTION */
 /* ============================================= */
 .hero {
   min-height: 100vh;
@@ -252,7 +252,7 @@ nav a:hover::after {
 }
 
 /* ============================================= */
-/* ABOUT SECTION                                 */
+/* ABOUT SECTION */
 /* ============================================= */
 #about {
   scroll-margin-top: 90px;
@@ -277,7 +277,7 @@ nav a:hover::after {
 }
 
 /* ============================================= */
-/* AMENITIES SECTION                             */
+/* AMENITIES SECTION */
 /* ============================================= */
 #amenities {
   scroll-margin-top: 90px;
@@ -316,7 +316,7 @@ nav a:hover::after {
 }
 
 /* ============================================= */
-/* GALLERY SLIDER SECTION                        */
+/* GALLERY SLIDER SECTION */
 /* ============================================= */
 #gallery {
   scroll-margin-top: 90px;
@@ -345,7 +345,7 @@ nav a:hover::after {
 }
 
 /* ============================================= */
-/* LOCATION SECTION                              */
+/* LOCATION SECTION */
 /* ============================================= */
 #location {
   scroll-margin-top: 90px;
@@ -362,7 +362,7 @@ nav a:hover::after {
 }
 
 /* ============================================= */
-/* REVIEWS SECTION                               */
+/* REVIEWS SECTION */
 /* ============================================= */
 #reviews {
   scroll-margin-top: 90px;
@@ -412,52 +412,6 @@ nav a:hover::after {
   z-index: 0;
 }
 
-.review-overlay {
-  position: relative; /* Para que el contenido esté sobre la imagen */
-  z-index: 1;
-  background: linear-gradient(
-    to top,
-    rgba(0, 0, 0, 0.8),
-    rgba(0, 0, 0, 0) 50%
-  ); /* Degradado oscuro en la parte inferior */
-  color: #fff;
-  padding: 30px;
-  padding-top: 80px; /* Más espacio arriba para el degradado */
-  text-align: center;
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-end;
-  height: 100%; /* Ocupa toda la altura para que el degradado sea efectivo */
-}
-
-.review-overlay h3 {
-  font-family: var(--font-heading);
-  font-size: 1.4rem;
-  margin-bottom: 10px;
-  color: #fff;
-}
-
-.review-overlay p {
-  font-family: var(--font-body);
-  font-size: 0.95rem;
-  line-height: 1.6;
-  margin-bottom: 15px;
-  color: rgba(255, 255, 255, 0.9);
-}
-
-.review-overlay span {
-  font-size: 0.85rem;
-  font-weight: 500;
-  color: rgba(255, 255, 255, 0.7);
-}
-
-.review-icon {
-  font-size: 2.5rem;
-  color: var(--color-primary); /* Icono de Airbnb con el color primario */
-  margin-bottom: 20px;
-  opacity: 0.8;
-}
-
 /* Navegación del Swiper para Reseñas */
 .reviewsSwiper .swiper-button-next,
 .reviewsSwiper .swiper-button-prev {
@@ -495,7 +449,7 @@ nav a:hover::after {
 }
 
 /* ============================================= */
-/* RESERVATION SECTION (REDESIGNED)              */
+/* RESERVATION SECTION (REDESIGNED) */
 /* ============================================= */
 .reservation-section {
   background-color: #ffffff;
@@ -503,77 +457,42 @@ nav a:hover::after {
   padding: 100px 0;
 }
 
-/* El input donde se activa el calendario */
-#date-picker {
-  font-family: var(--font-body);
-  font-size: 1.1rem;
-  padding: 20px;
-  border-radius: var(--border-radius);
-  border: 2px solid var(--color-border);
-  box-shadow: none; /* Quitamos la sombra para un look más plano */
-  text-align: center;
-  cursor: pointer;
-  width: 100%;
-  max-width: 450px;
-  margin: 1rem auto;
-  background-color: #ffffff;
+/* Contenedor del botón de Airbnb */
+.airbnb-button-wrapper {
+  margin-top: 30px; /* Espacio entre el texto y el nuevo botón */
+  text-align: center; /* Centrar el botón */
+}
+
+/* Estilos para el nuevo botón de Airbnb */
+.airbnb-redirect-btn {
+  background-color: var(--color-primary); /* Usa tu color primario */
+  color: #fff;
+  border: 2px solid var(--color-primary);
+  padding: 18px 40px;
+  border-radius: 0px; /* Mantener tu estilo de botón */
+  font-size: 1rem;
+  font-weight: 550;
+  letter-spacing: 1.5px;
+  display: inline-flex; /* Para alinear el texto y el icono */
+  align-items: center;
+  gap: 10px; /* Espacio entre el texto y el icono */
   transition: all 0.3s ease;
 }
 
-#date-picker:hover {
-  border-color: var(--color-primary); /* Resalta el borde al pasar el ratón */
+.airbnb-redirect-btn:hover {
+  background-color: #5ac4dd; /* Un tono un poco más oscuro o diferente al hacer hover */
+  border-color: #5ac4dd;
+  transform: translateY(-5px);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
 }
 
-/* Contenedor del resumen de la reserva */
-#booking-summary {
-  margin-top: 1.5rem;
-  padding: 0; /* Quitamos el padding para un diseño más limpio */
-  background-color: transparent; /* Fondo transparente */
-  border-radius: 0;
-  border: none; /* Sin bordes */
-  max-width: 450px;
-  margin-left: auto;
-  margin-right: auto;
-  text-align: left;
-}
-
-.booking-summary-hidden {
-  display: none;
-}
-
-/* Detalles del precio */
-.summary-details {
-  padding: 20px 0;
-  font-size: 1rem;
-}
-
-.summary-details p {
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: 10px;
-  color: var(--color-text-primary);
-}
-
-#price-calculation {
-  color: var(--color-text-secondary);
-}
-
-#total-price {
-  font-weight: 700;
-  font-size: 1.2rem;
-  border-top: 1px solid var(--color-border);
-  padding-top: 10px;
-}
-
-/* Botón de reserva */
-#booking-summary .btn {
-  width: 100%; /* El botón ocupa todo el ancho */
-  padding: 18px; /* Botón más grande */
-  font-size: 1rem;
+/* Ajusta el espaciado del p que precede al formulario si es necesario */
+.reservation-section p {
+  margin-bottom: 2rem;
 }
 
 /* ============================================= */
-/* FOOTER                                        */
+/* FOOTER */
 /* ============================================= */
 footer {
   padding: 50px 0;
@@ -585,116 +504,8 @@ footer p {
   margin: 0;
 }
 
-/* =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-= */
-/* ESTILOS PERSONALIZADOS PARA FLATPICKR CALENDAR */
-/* -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=- */
-
-/* Contenedor principal del calendario */
-.flatpickr-calendar {
-  font-family: var(--font-body) !important;
-  background: var(--color-surface) !important;
-  border-radius: var(--border-radius) !important;
-  border: 1px solid var(--color-border) !important;
-  box-shadow: var(--shadow) !important;
-  width: 320px !important;
-}
-
-/* Mes y año */
-.flatpickr-current-month .flatpickr-monthDropdown-months {
-  font-family: var(--font-heading) !important;
-  font-size: 1.2rem !important;
-  font-weight: 700 !important;
-  color: var(--color-text-primary) !important;
-}
-.numInputWrapper .numInput.cur-year {
-  font-family: var(--font-heading) !important;
-  font-weight: 700 !important;
-  color: var(--color-text-primary) !important;
-}
-
-/* Flechas de navegación */
-.flatpickr-arrowUp,
-.flatpickr-arrowDown {
-  display: none !important; /* Ocultamos las flechas de número del año que no usamos */
-}
-.flatpickr-prev-month svg,
-.flatpickr-next-month svg {
-  fill: var(--color-primary) !important; /* Color de las flechas */
-  width: 16px !important;
-  height: 16px !important;
-}
-.flatpickr-prev-month:hover,
-.flatpickr-next-month:hover {
-  background: var(--color-background) !important;
-}
-
-/* Días de la semana (Mon, Tue, etc.) */
-.flatpickr-weekday {
-  font-family: var(--font-body) !important;
-  font-weight: 700 !important;
-  color: var(--color-text-secondary) !important;
-  font-size: 0.8rem !important;
-  text-transform: uppercase;
-}
-
-/* Estilo de cada día (número) */
-.flatpickr-day {
-  color: var(--color-text-primary) !important;
-  border: none !important;
-  font-weight: 500 !important;
-  transition: all 0.2s ease;
-}
-.flatpickr-day:hover {
-  background: var(--color-background) !important;
-}
-
-/* Días deshabilitados (pasados y ya reservados) */
-.flatpickr-day.flatpickr-disabled {
-  color: #ccc !important;
-  text-decoration: line-through;
-  background: repeating-linear-gradient(
-    -45deg,
-    transparent,
-    transparent 4px,
-    rgba(0, 0, 0, 0.02) 4px,
-    rgba(0, 0, 0, 0.02) 8px
-  ) !important;
-}
-
-/* Día de hoy */
-.flatpickr-day.today {
-  border-color: var(--color-primary) !important;
-  color: var(--color-primary) !important;
-  font-weight: 700 !important;
-}
-.flatpickr-day.today:hover {
-  background: var(--color-primary) !important;
-  color: #fff !important;
-}
-
-/* Días seleccionados (check-in y check-out) */
-.flatpickr-day.selected,
-.flatpickr-day.startRange,
-.flatpickr-day.endRange {
-  background: var(--color-primary) !important;
-  border-color: var(--color-primary) !important;
-  color: #fff !important;
-}
-
-/* Rango entre las fechas seleccionadas */
-.flatpickr-day.inRange {
-  background: rgba(
-    52,
-    152,
-    219,
-    0.1
-  ) !important; /* Usamos el color primario con baja opacidad */
-  box-shadow: -5px 0 0 rgba(52, 152, 219, 0.1), 5px 0 0 rgba(52, 152, 219, 0.1) !important;
-  border-color: transparent !important;
-}
-
 /* ============================================= */
-/* MENÚ HAMBURGUESA MÓVIL                        */
+/* MENÚ HAMBURGUESA MÓVIL */
 /* ============================================= */
 .nav-toggle,
 .nav-close {
@@ -744,11 +555,11 @@ footer p {
 }
 
 /* ============================================= */
-/*               MEDIA QUERIES (RESPONSIVE)      */
+/*               MEDIA QUERIES (RESPONSIVE) */
 /* ============================================= */
 
 /* --------------------------------------------- */
-/* TABLETS Y DISPOSITIVOS MEDIANOS (~992px)      */
+/* TABLETS Y DISPOSITIVOS MEDIANOS (~992px) */
 /* --------------------------------------------- */
 @media (max-width: 992px) {
   body {
@@ -775,16 +586,14 @@ footer p {
   .swiper {
     height: 60vh;
   }
-  .contact-info {
-    padding: 80px 40px;
-  }
-  .contact-image {
-    min-height: 350px;
-  }
+  /* contact-info ya no existe en el HTML */
+  /* .contact-info { padding: 80px 40px; } */
+  /* contact-image ya no existe en el HTML */
+  /* .contact-image { min-height: 350px; } */
 }
 
 /* --------------------------------------------- */
-/* MÓVILES Y DISPOSITIVOS PEQUEÑOS (~768px)      */
+/* MÓVILES Y DISPOSITIVOS PEQUEÑOS (~768px) */
 /* --------------------------------------------- */
 @media (max-width: 768px) {
   header,
@@ -837,9 +646,8 @@ footer p {
     margin-bottom: 5px; /* Espacio entre el icono y el texto */
   }
 
-  .contact-info {
-    padding: 60px 20px;
-  }
+  /* contact-info ya no existe en el HTML */
+  /* .contact-info { padding: 60px 20px; } */
 
   .hero-actions .btn {
     padding: 15px 10px; /* Hacemos los botones menos altos y anchos */
@@ -873,79 +681,12 @@ footer p {
     min-height: 380px;
   }
 
-  .review-overlay {
-    padding: 20px;
-    padding-top: 60px;
-  }
-
-  .review-overlay h3 {
-    font-size: 1.2rem;
-  }
-
-  .review-overlay p {
-    font-size: 0.85rem;
-  }
-
-  .review-icon {
-    font-size: 2rem;
-    margin-bottom: 15px;
-  }
-
   .view-more-reviews .btn-secondary {
     padding: 12px 25px;
     font-size: 0.85rem;
   }
-}
 
-/*AIRBNB*/
-
-/* Ocultar el botón original */
-.hidden-button {
-  display: none !important;
-}
-
-/* Estilos para el nuevo botón de Airbnb */
-.airbnb-button-wrapper {
-  margin-top: 30px; /* Espacio entre el calendario/sumario y el nuevo botón */
-  text-align: center; /* Centrar el botón */
-}
-
-.airbnb-redirect-btn {
-  background-color: var(--color-primary); /* Usa tu color primario */
-  color: #fff;
-  border: 2px solid var(--color-primary);
-  padding: 18px 40px;
-  border-radius: 0px; /* Mantener tu estilo de botón */
-  font-size: 1rem;
-  font-weight: 550;
-  letter-spacing: 1.5px;
-  display: inline-flex; /* Para alinear el texto y el icono */
-  align-items: center;
-  gap: 10px; /* Espacio entre el texto y el icono */
-  transition: all 0.3s ease;
-}
-
-.airbnb-redirect-btn:hover {
-  background-color: #5ac4dd; /* Un tono un poco más oscuro o diferente al hacer hover */
-  border-color: #5ac4dd;
-  transform: translateY(-5px);
-  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
-}
-
-/* Ajustes para el formulario de reserva si el botón de Airbnb lo hace ver extraño */
-#booking-form {
-  display: flex; /* Permite que el contenido del formulario se alinee */
-  flex-direction: column; /* Apila los elementos verticalmente */
-  align-items: center; /* Centra el contenido del formulario */
-}
-
-/* Ajusta el espaciado del p que precede al formulario si es necesario */
-.reservation-section p {
-  margin-bottom: 2rem;
-}
-
-/* Media Queries para el botón de Airbnb */
-@media (max-width: 768px) {
+  /* Media Queries para el botón de Airbnb */
   .airbnb-redirect-btn {
     width: 90%; /* Que ocupe más espacio en móviles */
     max-width: 350px; /* Limita el ancho máximo */
