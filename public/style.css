@@ -477,6 +477,7 @@ nav a:hover::after {
   align-items: center;
   gap: 10px; /* Espacio entre el texto y el icono */
   transition: all 0.3s ease;
+  text-align: center;
 }
 
 .airbnb-redirect-btn:hover {
@@ -692,6 +693,5 @@ footer p {
     max-width: 350px; /* Limita el ancho máximo */
     padding: 15px 25px;
     font-size: 0.9rem;
-    text-align: center;
   }
 }
