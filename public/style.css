@@ -349,16 +349,70 @@ nav a:hover::after {
 /* ============================================= */
 #location {
   scroll-margin-top: 90px;
-}
-.map-container {
-  border-radius: var(--border-radius);
-  overflow: hidden;
-  box-shadow: var(--shadow);
+  background-color: var(
+    --color-background
+  ); /* Mantener el color de fondo ligero */
 }
 
 #location .section-title {
-  color: #ffffff;
-  text-shadow: 2px 2px 5px rgba(0, 0, 0, 0.15);
+  color: var(
+    --color-text-primary
+  ); /* Cambiar el color del título a uno más visible sobre fondo claro */
+  text-shadow: none; /* Eliminar la sombra si el fondo es claro */
+}
+
+.location-image-wrapper {
+  position: relative;
+  width: 100%;
+  padding-bottom: 56.25%; /* Relación de aspecto 16:9 para la imagen */
+  border-radius: var(--border-radius);
+  overflow: hidden;
+  box-shadow: var(--shadow);
+  display: block; /* Asegura que el contenedor se comporte como un bloque */
+}
+
+.location-image {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover; /* Cubre el área manteniendo la relación de aspecto */
+  filter: brightness(
+    0.7
+  ); /* Oscurece un poco la imagen para que el botón resalte */
+  transition: filter 0.3s ease;
+}
+
+.location-image-wrapper:hover .location-image {
+  filter: brightness(0.8);
+}
+
+.location-map-btn {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background-color: var(--color-primary); /* Color de fondo del botón */
+  color: #fff; /* Color del texto del botón */
+  border: 2px solid var(--color-primary);
+  padding: 15px 35px;
+  border-radius: 50px; /* Botón con bordes redondeados */
+  font-size: 1.05rem;
+  font-weight: 600;
+  letter-spacing: 1px;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  z-index: 10; /* Asegura que esté por encima de la imagen */
+  transition: all 0.3s ease;
+}
+
+.location-map-btn:hover {
+  background-color: #5ac4dd; /* Un tono un poco más oscuro al hacer hover */
+  border-color: #5ac4dd;
+  transform: translate(-50%, -50%) translateY(-5px); /* Pequeño movimiento hacia arriba */
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
 }
 
 /* ============================================= */
@@ -671,6 +725,12 @@ footer p {
   /* MOSTRAMOS el botón de la hamburguesa */
   .nav-toggle {
     display: block;
+  }
+
+  .location-map-btn {
+    padding: 12px 25px;
+    font-size: 0.9rem;
+    gap: 8px;
   }
 
   .reviewsSwiper {
