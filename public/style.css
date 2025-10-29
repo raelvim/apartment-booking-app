@@ -520,7 +520,7 @@ nav a:hover::after {
 /* Estilos para el nuevo botón de Airbnb */
 .airbnb-redirect-btn {
   background-color: #ffffff; /* Usa tu color primario */
-  color: #fff;
+  color: var(--color-primary);
   border: 2px solid var(--color-primary);
   padding: 18px 40px;
   border-radius: 0px; /* Mantener tu estilo de botón */
@@ -536,8 +536,8 @@ nav a:hover::after {
 
 .airbnb-redirect-btn:hover {
   background-color: #ffffff; /* Un tono un poco más oscuro o diferente al hacer hover */
-  color: #272727;
-  border-color: #5ac4dd;
+  color: var(--color-primary);
+  border-color: #44a5bb;
   transform: translateY(-5px);
   box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
 }
