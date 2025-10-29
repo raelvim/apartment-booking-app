@@ -465,7 +465,7 @@ nav a:hover::after {
 
 /* Estilos para el nuevo botón de Airbnb */
 .airbnb-redirect-btn {
-  background-color: var(--color-primary); /* Usa tu color primario */
+  background-color: #ffffff; /* Usa tu color primario */
   color: #fff;
   border: 2px solid var(--color-primary);
   padding: 18px 40px;
