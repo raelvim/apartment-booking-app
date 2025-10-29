@@ -536,7 +536,7 @@ nav a:hover::after {
 
 .airbnb-redirect-btn:hover {
   background-color: #ffffff; /* Un tono un poco más oscuro o diferente al hacer hover */
-  color: #ffffff;
+  color: #272727;
   border-color: #5ac4dd;
   transform: translateY(-5px);
   box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
@@ -727,12 +727,6 @@ footer p {
     display: block;
   }
 
-  .location-map-btn {
-    padding: 12px 25px;
-    font-size: 0.9rem;
-    gap: 8px;
-  }
-
   .reviewsSwiper {
     padding-top: 30px;
     padding-bottom: 30px;
@@ -755,5 +749,11 @@ footer p {
     text-align: center;
     padding: 15px 25px;
     font-size: 0.9rem;
+  }
+
+  .location-map-btn {
+    padding: 12px 25px;
+    font-size: 0.9rem;
+    gap: 8px;
   }
 }
