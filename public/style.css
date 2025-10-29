@@ -349,9 +349,7 @@ nav a:hover::after {
 /* ============================================= */
 #location {
   scroll-margin-top: 90px;
-  background-color: var(
-    --color-background
-  ); /* Mantener el color de fondo ligero */
+  background-color: #ffffff;
 }
 
 #location .section-title {
@@ -378,32 +376,22 @@ nav a:hover::after {
   width: 100%;
   height: 100%;
   object-fit: cover; /* Cubre el área manteniendo la relación de aspecto */
-  filter: brightness(
-    0.7
-  ); /* Oscurece un poco la imagen para que el botón resalte */
-  transition: filter 0.3s ease;
-}
-
-.location-image-wrapper:hover .location-image {
-  filter: brightness(0.8);
 }
 
 .location-map-btn {
   position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
+  bottom: 20px;
+  right: 20px;
   background-color: var(--color-primary); /* Color de fondo del botón */
   color: #fff; /* Color del texto del botón */
   border: 2px solid var(--color-primary);
-  padding: 15px 35px;
-  border-radius: 50px; /* Botón con bordes redondeados */
-  font-size: 1.05rem;
+  padding: 10px 20px;
+  font-size: 0.9rem;
   font-weight: 600;
-  letter-spacing: 1px;
+  letter-spacing: 0.5px;
   display: inline-flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   z-index: 10; /* Asegura que esté por encima de la imagen */
   transition: all 0.3s ease;
 }
@@ -752,8 +740,10 @@ footer p {
   }
 
   .location-map-btn {
-    padding: 12px 25px;
-    font-size: 0.9rem;
-    gap: 8px;
+    bottom: 15px;
+    right: 15px;
+    padding: 8px 15px;
+    font-size: 0.8rem;
+    gap: 6px;
   }
 }
