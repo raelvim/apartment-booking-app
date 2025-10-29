@@ -679,7 +679,7 @@ footer p {
   }
 
   .review-slide {
-    width: 280px; /* Ancho más pequeño en móvil */
+    width: 300px; /* Ancho más pequeño en móvil */
     min-height: 380px;
   }
 
