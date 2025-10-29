@@ -738,6 +738,9 @@ footer p {
     padding: 15px 25px;
     font-size: 0.9rem;
   }
+  .location-image-wrapper {
+    padding-bottom: 75%;
+  }
 
   .location-map-btn {
     bottom: 15px;
