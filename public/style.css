@@ -481,7 +481,7 @@ nav a:hover::after {
 }
 
 .airbnb-redirect-btn:hover {
-  background-color: #5ac4dd; /* Un tono un poco más oscuro o diferente al hacer hover */
+  background-color: #ffffff; /* Un tono un poco más oscuro o diferente al hacer hover */
   color: #ffffff;
   border-color: #5ac4dd;
   transform: translateY(-5px);
