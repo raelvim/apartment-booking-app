@@ -408,10 +408,8 @@ nav a:hover::after {
 /* ============================================= */
 #reviews {
   scroll-margin-top: 90px;
-  background-color: var(
-    --color-background
-  ); /* O tu color de fondo claro preferido */
-  padding-bottom: 60px; /* Un poco menos de padding inferior */
+  background-color: var(--color-background);
+  padding-bottom: 60px;
 }
 
 .reviews-section .section-title {
@@ -428,30 +426,80 @@ nav a:hover::after {
   width: 100%;
   padding-top: 50px;
   padding-bottom: 50px;
-  height: auto; /* Altura automática para que se ajuste al contenido */
+  height: auto;
 }
 
-.review-slide {
-  background-color: var(--color-surface);
-  border-radius: var(--border-radius);
-  box-shadow: var(--shadow);
-  width: 300px; /* Ancho base de cada slide */
-  min-height: 400px; /* Altura mínima para mantener uniformidad */
-  overflow: hidden;
-  position: relative;
+/* NUEVOS ESTILOS PARA LAS TARJETAS DE RESEÑA */
+.review-card {
+  background-color: var(--color-surface); /* Fondo blanco */
+  border-radius: 0px; /* Bordes rectos */
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08); /* Sombra leve */
+  padding: 30px;
   display: flex;
   flex-direction: column;
-  justify-content: flex-end; /* Alinea el contenido hacia abajo */
+  justify-content: space-between; /* Distribuye el espacio */
+  width: 100%; /* Asegura que la tarjeta ocupe el ancho del slide */
+  min-height: 280px; /* Altura mínima para una apariencia uniforme */
+  max-height: 400px; /* Altura máxima para evitar tarjetas gigantes */
+  overflow: hidden; /* Oculta contenido si excede la altura máxima */
 }
 
-.review-slide img {
-  width: 100%;
-  height: 100%; /* La imagen llenará el slide */
+.review-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 20px;
+  gap: 15px; /* Espacio entre avatar y nombre/estrellas */
+}
+
+.guest-avatar {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%; /* Avatares redondos */
   object-fit: cover;
-  position: absolute;
-  top: 0;
-  left: 0;
-  z-index: 0;
+  border: 2px solid var(--color-primary); /* Borde primario para destacar */
+  flex-shrink: 0; /* Evita que el avatar se encoja */
+}
+
+.guest-info {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.guest-name {
+  font-family: var(--font-heading);
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  margin-bottom: 5px; /* Espacio entre nombre y estrellas */
+}
+
+.stars {
+  color: #ffd700; /* Color oro para las estrellas */
+  font-size: 0.9rem;
+  margin-bottom: 0; /* Eliminar margen de p */
+}
+.stars i {
+  margin-right: 2px; /* Espacio entre cada estrella */
+}
+
+.review-text {
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+  line-height: 1.6;
+  color: var(--color-text-secondary);
+  flex-grow: 1; /* Permite que el texto ocupe el espacio disponible */
+  overflow: hidden; /* Oculta el texto si se desborda */
+  text-overflow: ellipsis; /* Añade puntos suspensivos si el texto es demasiado largo */
+}
+
+.review-date {
+  display: block;
+  font-size: 0.8rem;
+  color: var(--color-text-secondary);
+  text-align: right;
+  margin-top: 15px;
+  opacity: 0.8;
 }
 
 /* Navegación del Swiper para Reseñas */
@@ -467,7 +515,7 @@ nav a:hover::after {
   background: var(--color-primary) !important;
 }
 
-/* Botón "Ver más reseñas" */
+/* Botón "Ver más reseñas" (se mantiene igual) */
 .view-more-reviews {
   text-align: center;
   margin-top: 40px;
@@ -478,13 +526,13 @@ nav a:hover::after {
   color: #fff;
   border: 2px solid var(--color-primary);
   padding: 14px 30px;
-  border-radius: 50px; /* Botón más redondeado */
+  border-radius: 50px;
   font-size: 0.95rem;
   font-weight: 600;
 }
 
 .view-more-reviews .btn-secondary:hover {
-  background-color: #5ac4dd; /* Un tono un poco más oscuro */
+  background-color: #5ac4dd;
   color: #fff;
   transform: translateY(-3px);
   box-shadow: 0 8px 15px rgba(0, 0, 0, 0.2);
