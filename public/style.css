@@ -337,7 +337,7 @@ nav a:hover::after {
 
 #location {
   scroll-margin-top: 90px;
-  background-color: #ffffff;
+  background-color: var(--color-primary);
 }
 
 #location .section-title {
@@ -386,15 +386,14 @@ nav a:hover::after {
   background-color: #5ac4dd;
   border-color: #5ac4dd;
   color: #ffffff;
-  transform: translate(-50%, -50%) translateY(-1px);
-  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+  transform: translate(-1%, -1%) translateY(-1px);
 }
 
 /* REVIEWS SECTION */
 
 #reviews {
   scroll-margin-top: 90px;
-  background-color: var(--color-background);
+  background-color: #ffffff;
   padding-bottom: 60px;
 }
 
@@ -432,7 +431,7 @@ nav a:hover::after {
 /* RESERVATION SECTION (REDESIGNED) */
 
 .reservation-section {
-  background-color: #ffffff;
+  background-color: var(--color-primary);
   text-align: center;
   padding: 100px 0;
 }
@@ -461,10 +460,10 @@ nav a:hover::after {
 }
 
 .airbnb-redirect-btn:hover {
-  background-color: #ffffff;
+  background-color: var(--color-primary);
   color: var(--color-primary);
-  border-color: #44a5bb;
-  transform: translateY(-5px);
+  border-color: #ffffff;
+  transform: translateY(-1px);
   box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
 }
 
