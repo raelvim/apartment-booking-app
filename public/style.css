@@ -392,13 +392,14 @@ nav a:hover::after {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  z-index: 10; /* Asegura que esté por encima de la imagen */
+  z-index: 10;
   transition: all 0.3s ease;
 }
 
 .location-map-btn:hover {
   background-color: #5ac4dd; /* Un tono un poco más oscuro al hacer hover */
   border-color: #5ac4dd;
+  color: #ffffff
   transform: translate(-50%, -50%) translateY(-5px); /* Pequeño movimiento hacia arriba */
   box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
 }
