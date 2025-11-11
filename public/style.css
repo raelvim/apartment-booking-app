@@ -432,8 +432,8 @@ nav a:hover::after {
 
 .reservation-section {
   background-color: var(--color-background);
-  color: #ffffff;
   text-align: center;
+  color: #ffffff;
   padding: 100px 0;
 }
 
