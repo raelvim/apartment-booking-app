@@ -656,6 +656,8 @@ footer p {
     padding: 15px 25px;
     font-size: 0.9rem;
     gap: 12px;
+    display: flex;
+    margin: 0 auto;
   }
   .location-image-wrapper {
     padding-bottom: 75%;
