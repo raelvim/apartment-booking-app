@@ -17,10 +17,10 @@
       rel="stylesheet"
       href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css"
     />
-    <!-- Eliminado: <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css" /> -->
+
     <link rel="stylesheet" href="https://unpkg.com/aos@next/dist/aos.css" />
 
-    <!-- Tu Hoja de Estilos -->
+    <!-- Hoja de Estilos -->
     <link rel="stylesheet" href="style.css" />
   </head>
   <body>
@@ -28,7 +28,7 @@
       <nav class="container">
         <a href="#home" class="nav-brand">Lakeside Serenity</a>
 
-        <!-- Menú de escritorio (se ocultará en móvil) -->
+        <!-- Menú de escritorio que no aparece en el telf -->
         <ul class="nav-menu-desktop">
           <li><a href="#about">About</a></li>
           <li><a href="#amenities">Amenities</a></li>
@@ -40,12 +40,12 @@
           </li>
         </ul>
 
-        <!-- NUEVO: Botón de Hamburguesa (solo visible en móvil) -->
+        <!-- botón de hamburguesa para telf -->
         <div class="nav-toggle" id="nav-toggle">
           <i class="fas fa-bars"></i>
         </div>
 
-        <!-- NUEVO: Menú Desplegable Móvil (oculto por defecto) -->
+        <!-- Menú desplegable para telf hide -->
         <div class="nav-menu-mobile" id="nav-menu-mobile">
           <ul class="nav-list-mobile">
             <li><a href="#about" class="nav-link-mobile">About</a></li>
@@ -69,8 +69,6 @@
         <div class="hero-video-wrapper">
           <video autoplay loop muted playsinline>
             <source src="videos/26.mp4" type="video/mp4" />
-            <!-- Opcional: añade un MP4 como respaldo para navegadores muy viejos -->
-            <!-- <source src="videos/26.mp4" type="video/mp4"> -->
           </video>
         </div>
         <div class="hero-overlay"></div>
@@ -243,7 +241,6 @@
       <section id="location" class="bg-light">
         <div class="container">
           <h2 class="section-title">Prime Location</h2>
-          <!-- Aquí es donde se encontraba el iframe, ahora va la imagen y el botón -->
           <div class="location-image-wrapper" data-aos="fade-up">
             <img
               src="images/mapApto.png"
@@ -293,8 +290,7 @@
             Check availability and book your unforgettable stay directly on
             Airbnb!
           </p>
-          <!-- Eliminado: form id="booking-form" y todo su contenido -->
-          <!-- Ahora solo tendremos el botón de Airbnb -->
+
           <div class="airbnb-button-wrapper">
             <a
               href="https://www.airbnb.com.ec/rooms/732102319759567131?viralityEntryPoint=1&s=76&_set_bev_on_new_domain=1761410183_EAYzYyYjgyN2MxYW&source_impression_id=p3_1761586481_P3S3SGED0Ux4sxro#availability-calendar"
@@ -318,9 +314,7 @@
 
     <!-- SCRIPTS -->
     <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
-    <!-- Eliminado: <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script> -->
     <script src="https://unpkg.com/aos@next/dist/aos.js"></script>
-    <!-- Eliminado: <script src="https://js.stripe.com/v3/"></script> -->
 
     <script>
       document.addEventListener("DOMContentLoaded", () => {
@@ -386,8 +380,6 @@
           });
         }
 
-        // --- ELIMINADO: Lógica del sistema de reservas y Flatpickr ---
-
         // --- LÓGICA DEL MENÚ HAMBURGUESA ---
         const navMenu = document.getElementById("nav-menu-mobile");
         const navToggle = document.getElementById("nav-toggle");
@@ -407,7 +399,7 @@
             navMenu.classList.remove("show-menu");
           });
         }
-        // Función para cerrar el menú al hacer clic en un enlace
+        // Función para cerrar el menú al hacer clic en el enlace
         navLinks.forEach((link) => {
           link.addEventListener("click", () => {
             navMenu.classList.remove("show-menu");

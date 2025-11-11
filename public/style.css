@@ -1,6 +1,3 @@
-/* ============================================= */
-/* FONTS & GLOBAL VARIABLES - MODERN & WARM */
-/* ============================================= */
 @import url("https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Montserrat:wght@400;500;700&display=swap");
 
 :root {
@@ -18,9 +15,7 @@
   --border-radius: 12px;
 }
 
-/* ============================================= */
-/* BASE & GLOBAL STYLES */
-/* ============================================= */
+/* Base y Estilos globales */
 * {
   box-sizing: border-box;
   margin: 0;
@@ -114,9 +109,8 @@ section > .container > p {
   box-shadow: var(--shadow);
 }
 
-/* ============================================= */
 /* HEADER & NAVIGATION */
-/* ============================================= */
+
 header {
   background: linear-gradient(
     to bottom,
@@ -189,34 +183,32 @@ nav a:hover::after {
   border-radius: 0px;
 }
 
-/* ============================================= */
 /* HERO SECTION */
-/* ============================================= */
+
 .hero {
   min-height: 100vh;
-  display: flex; /* Mantenemos flex */
-  flex-direction: column; /* Lo hacemos explícitamente vertical */
-  justify-content: flex-end; /* Alineamos todo hacia abajo */
-  align-items: center; /* Centramos horizontalmente */
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
   text-align: center;
-  padding-bottom: 10vh; /* Añadimos el espacio inferior aquí */
+  padding-bottom: 10vh;
   position: relative;
   color: #fff;
 }
 .hero-video-wrapper {
-  position: absolute; /* Lo posiciona relativo al .hero */
+  position: absolute;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  overflow: hidden; /* Oculta cualquier desbordamiento del video */
-  z-index: 0; /* Lo pone detrás de todo */
+  overflow: hidden;
+  z-index: 0;
 }
 
 .hero-video-wrapper video {
   width: 100%;
   height: 100%;
-  /* 'cover' asegura que el video llene todo el espacio, recortando los bordes si es necesario */
   object-fit: cover;
 }
 .hero-overlay {
@@ -251,9 +243,8 @@ nav a:hover::after {
   gap: 20px;
 }
 
-/* ============================================= */
 /* ABOUT SECTION */
-/* ============================================= */
+
 #about {
   scroll-margin-top: 90px;
   background-color: var(--color-surface);
@@ -276,9 +267,8 @@ nav a:hover::after {
   box-shadow: var(--shadow);
 }
 
-/* ============================================= */
 /* AMENITIES SECTION */
-/* ============================================= */
+
 #amenities {
   scroll-margin-top: 90px;
 }
@@ -315,9 +305,8 @@ nav a:hover::after {
   font-size: 1.8rem;
 }
 
-/* ============================================= */
 /* GALLERY SLIDER SECTION */
-/* ============================================= */
+
 #gallery {
   scroll-margin-top: 90px;
   background-color: var(--color-surface);
@@ -344,29 +333,26 @@ nav a:hover::after {
   background: var(--color-primary) !important;
 }
 
-/* ============================================= */
 /* LOCATION SECTION */
-/* ============================================= */
+
 #location {
   scroll-margin-top: 90px;
   background-color: #ffffff;
 }
 
 #location .section-title {
-  color: var(
-    --color-text-primary
-  ); /* Cambiar el color del título a uno más visible sobre fondo claro */
-  text-shadow: none; /* Eliminar la sombra si el fondo es claro */
+  color: var(--color-text-primary);
+  text-shadow: none;
 }
 
 .location-image-wrapper {
   position: relative;
   width: 100%;
-  padding-bottom: 56.25%; /* Relación de aspecto 16:9 para la imagen */
+  padding-bottom: 56.25%;
   border-radius: var(--border-radius);
   overflow: hidden;
   box-shadow: var(--shadow);
-  display: block; /* Asegura que el contenedor se comporte como un bloque */
+  display: block;
 }
 
 .location-image {
@@ -375,15 +361,15 @@ nav a:hover::after {
   left: 0;
   width: 100%;
   height: 100%;
-  object-fit: cover; /* Cubre el área manteniendo la relación de aspecto */
+  object-fit: cover;
 }
 
 .location-map-btn {
   position: absolute;
   bottom: 20px;
   right: 20px;
-  background-color: var(--color-primary); /* Color de fondo del botón */
-  color: #fff; /* Color del texto del botón */
+  background-color: var(--color-primary);
+  color: #fff;
   border: 2px solid var(--color-primary);
   padding: 10px 20px;
   font-size: 0.9rem;
@@ -397,16 +383,15 @@ nav a:hover::after {
 }
 
 .location-map-btn:hover {
-  background-color: #5ac4dd; /* Un tono un poco más oscuro al hacer hover */
+  background-color: #5ac4dd;
   border-color: #5ac4dd;
-  color: #ffffff
-  transform: translate(-50%, -50%) translateY(-5px); /* Pequeño movimiento hacia arriba */
+  color: #ffffff;
+  transform: translate(-50%, -50%) translateY(-1px);
   box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
 }
 
-/* ============================================= */
 /* REVIEWS SECTION */
-/* ============================================= */
+
 #reviews {
   scroll-margin-top: 90px;
   background-color: var(--color-background);
@@ -422,7 +407,6 @@ nav a:hover::after {
   margin-bottom: 3rem;
 }
 
-/* Botón "Ver más reseñas" */
 .view-more-reviews {
   text-align: center;
   margin-top: 40px;
@@ -445,9 +429,8 @@ nav a:hover::after {
   box-shadow: 0 8px 15px rgba(0, 0, 0, 0.2);
 }
 
-/* ============================================= */
 /* RESERVATION SECTION (REDESIGNED) */
-/* ============================================= */
+
 .reservation-section {
   background-color: #ffffff;
   text-align: center;
@@ -456,43 +439,41 @@ nav a:hover::after {
 
 /* Contenedor del botón de Airbnb */
 .airbnb-button-wrapper {
-  margin-top: 30px; /* Espacio entre el texto y el nuevo botón */
-  text-align: center; /* Centrar el botón */
+  margin-top: 30px;
+  text-align: center;
 }
 
 /* Estilos para el nuevo botón de Airbnb */
 .airbnb-redirect-btn {
-  background-color: #ffffff; /* Usa tu color primario */
+  background-color: #ffffff;
   color: var(--color-primary);
   border: 2px solid var(--color-primary);
   padding: 18px 40px;
-  border-radius: 0px; /* Mantener tu estilo de botón */
+  border-radius: 0px;
   font-size: 1rem;
   font-weight: 550;
   letter-spacing: 1.5px;
-  display: inline-flex; /* Para alinear el texto y el icono */
+  display: inline-flex;
   align-items: center;
-  gap: 10px; /* Espacio entre el texto y el icono */
+  gap: 10px;
   transition: all 0.3s ease;
   text-align: center;
 }
 
 .airbnb-redirect-btn:hover {
-  background-color: #ffffff; /* Un tono un poco más oscuro o diferente al hacer hover */
+  background-color: #ffffff;
   color: var(--color-primary);
   border-color: #44a5bb;
   transform: translateY(-5px);
   box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
 }
 
-/* Ajusta el espaciado del p que precede al formulario si es necesario */
 .reservation-section p {
   margin-bottom: 2rem;
 }
 
-/* ============================================= */
 /* FOOTER */
-/* ============================================= */
+
 footer {
   padding: 50px 0;
   background-color: #6d6875;
@@ -503,12 +484,11 @@ footer p {
   margin: 0;
 }
 
-/* ============================================= */
 /* MENÚ HAMBURGUESA MÓVIL */
-/* ============================================= */
+
 .nav-toggle,
 .nav-close {
-  display: none; /* Ocultos por defecto en escritorio */
+  display: none;
   cursor: pointer;
   font-size: 1.5rem;
   color: #fff;
@@ -517,7 +497,7 @@ footer p {
 .nav-menu-mobile {
   position: fixed;
   top: 0;
-  right: -100%; /* Empieza fuera de la pantalla */
+  right: -100%;
   width: 70%;
   height: 100vh;
   background-color: rgba(255, 255, 255, 0.9);
@@ -548,18 +528,14 @@ footer p {
   right: 1.5rem;
 }
 
-/* Estado "show" para mostrar el menú */
 .show-menu {
   right: 0;
 }
 
-/* ============================================= */
-/*               MEDIA QUERIES (RESPONSIVE) */
-/* ============================================= */
+/* Estilo responsivo */
 
-/* --------------------------------------------- */
 /* TABLETS Y DISPOSITIVOS MEDIANOS (~992px) */
-/* --------------------------------------------- */
+
 @media (max-width: 992px) {
   body {
     font-size: 16px;
@@ -585,15 +561,10 @@ footer p {
   .swiper {
     height: 60vh;
   }
-  /* contact-info ya no existe en el HTML */
-  /* .contact-info { padding: 80px 40px; } */
-  /* contact-image ya no existe en el HTML */
-  /* .contact-image { min-height: 350px; } */
 }
 
-/* --------------------------------------------- */
 /* MÓVILES Y DISPOSITIVOS PEQUEÑOS (~768px) */
-/* --------------------------------------------- */
+
 @media (max-width: 768px) {
   header,
   nav {
@@ -615,10 +586,10 @@ footer p {
     font-size: 1.1rem;
   }
   .hero-actions {
-    display: flex; /* Aseguramos que sea flex */
-    flex-direction: row; /* Lo forzamos a ser horizontal (aunque es el valor por defecto) */
-    gap: 10px; /* Reducimos el espacio entre botones */
-    width: 100%; /* Hacemos que el contenedor ocupe todo el ancho disponible */
+    display: flex;
+    flex-direction: row;
+    gap: 10px;
+    width: 100%;
   }
   section {
     padding: 60px 0;
@@ -632,40 +603,35 @@ footer p {
     gap: 15px;
   }
   .amenity-item {
-    padding: 15px; /* Reducir el padding de los ítems */
-    font-size: 0.9rem; /* Reducir el tamaño de la fuente */
-    gap: 10px; /* Reducir el espacio entre el icono y el texto */
-    flex-direction: column; /* Colocar icono y texto en columna */
-    text-align: center; /* Centrar el texto */
-    justify-content: center; /* Centrar verticalmente */
+    padding: 15px;
+    font-size: 0.9rem;
+    gap: 10px;
+    flex-direction: column;
+    text-align: center;
+    justify-content: center;
   }
 
   .amenity-item i {
-    font-size: 1.5rem; /* Reducir el tamaño del icono */
-    margin-bottom: 5px; /* Espacio entre el icono y el texto */
+    font-size: 1.5rem;
+    margin-bottom: 5px;
   }
-
-  /* contact-info ya no existe en el HTML */
-  /* .contact-info { padding: 60px 20px; } */
 
   .hero-actions .btn {
-    padding: 15px 10px; /* Hacemos los botones menos altos y anchos */
-    font-size: 0.8rem; /* Reducimos el tamaño de la letra */
+    padding: 15px 10px;
+    font-size: 0.8rem;
     letter-spacing: 1px;
-    flex-grow: 1; /* ¡La clave! Ambos botones intentarán crecer para ocupar el espacio */
-    flex-basis: 0; /* Asegura que la distribución del espacio sea equitativa */
+    flex-grow: 1;
+    flex-basis: 0;
   }
 
-  /* Hacemos que el botón primario sea un poco más grande */
   .hero-actions .btn-primary {
-    flex-grow: 1.5; /* Le damos más "peso" al botón de la galería para que sea más grande */
+    flex-grow: 1.5;
   }
 
   .nav-menu-desktop {
     display: none;
   }
 
-  /* MOSTRAMOS el botón de la hamburguesa */
   .nav-toggle {
     display: block;
   }
@@ -676,7 +642,7 @@ footer p {
   }
 
   .review-slide {
-    width: 300px; /* Ancho más pequeño en móvil */
+    width: 300px;
     min-height: 380px;
   }
 
@@ -685,10 +651,9 @@ footer p {
     font-size: 0.85rem;
   }
 
-  /* Media Queries para el botón de Airbnb */
   .airbnb-redirect-btn {
-    width: 90%; /* Que ocupe más espacio en móviles */
-    max-width: 270px; /* Limita el ancho máximo */
+    width: 90%;
+    max-width: 270px;
     text-align: center;
     padding: 15px 25px;
     font-size: 0.9rem;
