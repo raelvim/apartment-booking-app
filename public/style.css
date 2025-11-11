@@ -337,7 +337,8 @@ nav a:hover::after {
 
 #location {
   scroll-margin-top: 90px;
-  background-color: var(--color-background);
+  background-color: #ffffff;
+  border: 2px solid #5ac4dd;
 }
 
 #location .section-title {
