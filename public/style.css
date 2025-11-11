@@ -337,7 +337,7 @@ nav a:hover::after {
 
 #location {
   scroll-margin-top: 90px;
-  background-color: var(--color-primary);
+  background-color: var(--color-background);
 }
 
 #location .section-title {
@@ -369,7 +369,7 @@ nav a:hover::after {
   bottom: 20px;
   right: 20px;
   background-color: var(--color-primary);
-  color: #fff;
+  color: #ffffff;
   border: 2px solid var(--color-primary);
   padding: 10px 20px;
   font-size: 0.9rem;
@@ -414,7 +414,6 @@ nav a:hover::after {
 .view-more-reviews .btn-secondary {
   background-color: var(--color-primary);
   color: #fff;
-  border: 2px solid var(--color-primary);
   padding: 14px 30px;
   border-radius: 50px;
   font-size: 0.95rem;
@@ -431,7 +430,7 @@ nav a:hover::after {
 /* RESERVATION SECTION (REDESIGNED) */
 
 .reservation-section {
-  background-color: var(--color-primary);
+  background-color: var(--color-background);
   text-align: center;
   padding: 100px 0;
 }
