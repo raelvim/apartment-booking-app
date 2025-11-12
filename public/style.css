@@ -431,43 +431,42 @@ nav a:hover::after {
 /* RESERVATION SECTION*/
 
 .reservation-section {
-  background-color: var(--color-background);
+  background-color: #e2eff5;
   text-align: center;
   padding: 100px 0;
 }
 
 .reservation-section .section-title {
-  color: #ffffff;
+  color: #495057;
+}
+
+.reservation-section p {
+  color: #6c757d;
+  margin-bottom: 2.5rem;
 }
 
 /* Contenedor del botón de Airbnb */
 .airbnb-button-wrapper {
   margin-top: 30px;
-  text-align: center;
 }
 
-/* Estilos para el nuevo botón de Airbnb */
-.airbnb-redirect-btn {
-  background-color: #ffffff;
-  color: var(--color-primary);
-  border: 2px solid var(--color-primary);
-  padding: 18px 40px;
-  border-radius: 0px;
-  font-size: 1rem;
-  font-weight: 550;
-  letter-spacing: 1.5px;
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  transition: all 0.3s ease;
+.airbnb-button-image-link {
+  display: inline-block;
+  line-height: 0;
 }
 
-.airbnb-redirect-btn:hover {
-  background-color: var(--color-primary);
-  color: var(--color-primary);
-  border-color: #ffffff;
-  transform: translateY(-1px);
-  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+.airbnb-custom-button {
+  max-width: 350px;
+  width: 100%;
+  height: auto;
+  border: none;
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.airbnb-custom-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 15px 30px rgba(0, 0, 0, 0.2);
 }
 
 .reservation-section p {
@@ -653,15 +652,10 @@ footer p {
     font-size: 0.85rem;
   }
 
-  .airbnb-redirect-btn {
-    width: 90%;
-    max-width: 270px;
-    padding: 15px 25px;
-    font-size: 1rem;
-    gap: 9px;
-    display: flex;
-    margin: 0 auto;
+  .airbnb-custom-button {
+    max-width: 90%;
   }
+
   .location-image-wrapper {
     padding-bottom: 75%;
   }
