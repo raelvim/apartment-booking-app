@@ -448,6 +448,7 @@ nav a:hover::after {
 /* Contenedor del botón de Airbnb */
 .airbnb-button-wrapper {
   margin-top: 30px;
+  text-align: center;
 }
 
 /* ESTILOS DEL BOTÓN DE IMAGEN  */
@@ -658,7 +659,7 @@ footer p {
   }
 
   .airbnb-custom-button {
-    max-width: 90%;
+    max-width: 280px;
   }
 
   .airbnb-button-wrapper {
