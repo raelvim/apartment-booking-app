@@ -450,22 +450,24 @@ nav a:hover::after {
   margin-top: 30px;
 }
 
-/* ESTILOS DEL BOTÓN DE IMAGEN (ACTUALIZADOS) */
+/* ESTILOS DEL BOTÓN DE IMAGEN  */
 .airbnb-button-image-link {
   display: inline-block;
   line-height: 0;
-  padding: 0; /* Añadido: Elimina el padding del enlace */
-  border: none; /* Añadido: Elimina el borde del enlace */
-  background: transparent; /* Añadido: Fondo transparente para el enlace */
-  text-decoration: none; /* Añadido: Elimina el subrayado por defecto */
-  transition: transform 0.3s ease, box-shadow 0.3s ease; /* Transiciones para el hover */
-  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1); /* Sombra inicial en el enlace */
-  border-radius: 8px; /* Borde redondeado en el enlace para que la sombra lo siga */
+  padding: 0;
+  border: none;
+  background: transparent;
+  text-decoration: none;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .airbnb-button-image-link:hover {
-  transform: translateY(-5px); /* Efecto de "levantar" al pasar el ratón */
-  box-shadow: 0 15px 30px rgba(0, 0, 0, 0.2); /* Sombra más pronunciada al hacer hover */
+  transform: translateY(-5px);
+  box-shadow: 0 15px 30px rgba(0, 0, 0, 0.2);
 }
 
 .airbnb-custom-button {
@@ -655,10 +657,12 @@ footer p {
     font-size: 0.85rem;
   }
 
-  /* Aquí se elimina el old .airbnb-custom-button mobile style
-     y se aplica el nuevo para la imagen */
   .airbnb-custom-button {
     max-width: 90%;
+  }
+
+  .airbnb-button-wrapper {
+    text-align: center;
   }
 
   .location-image-wrapper {
