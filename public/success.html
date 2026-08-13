@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
@@ -13,6 +13,15 @@
     </div>
 
     <script>
+      // El frontend (Netlify) y el backend viven en dominios distintos.
+      // TODO: reemplazar por la URL real una vez desplegado el backend (Render/Railway/etc).
+      const PROD_API_URL = "https://REPLACE-WITH-YOUR-BACKEND-URL.onrender.com";
+      const API_URL = ["localhost", "127.0.0.1"].includes(
+        window.location.hostname,
+      )
+        ? `http://${window.location.hostname}:3001`
+        : PROD_API_URL;
+
       document.addEventListener("DOMContentLoaded", async () => {
         const messageEl = document.getElementById("message");
         const checkIn = localStorage.getItem("pending_booking_checkIn");
@@ -24,14 +33,14 @@
 
         if (checkIn && checkOut && sessionId) {
           try {
-            const response = await fetch("/api/bookings", {
+            const response = await fetch(`${API_URL}/api/bookings`, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
                 checkIn,
                 checkOut,
-                stripePaymentId: sessionId,
-              }), // ENVIAMOS EL ID DE PAGO
+                sessionId,
+              }),
             });
             if (!response.ok) throw new Error("Failed to save booking.");
 

@@ -1,0 +1,570 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Tax Settings - Lakeside Serenity Admin</title>
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
+    />
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          "Helvetica Neue", Arial, sans-serif;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+      }
+
+      .container {
+        max-width: 600px;
+        width: 100%;
+      }
+
+      .card {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        overflow: hidden;
+      }
+
+      .card-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 30px;
+        text-align: center;
+      }
+
+      .card-header h1 {
+        font-size: 28px;
+        margin-bottom: 5px;
+      }
+
+      .card-header p {
+        opacity: 0.9;
+        font-size: 14px;
+      }
+
+      .card-body {
+        padding: 40px;
+      }
+
+      .form-group {
+        margin-bottom: 25px;
+      }
+
+      .form-group label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: 600;
+        color: #333;
+        font-size: 14px;
+      }
+
+      .form-group .description {
+        font-size: 12px;
+        color: #666;
+        margin-bottom: 8px;
+      }
+
+      .input-group {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .form-group input {
+        flex: 1;
+        padding: 12px 15px;
+        border: 2px solid #e0e0e0;
+        border-radius: 6px;
+        font-size: 16px;
+        transition: border-color 0.3s;
+      }
+
+      .form-group input:focus {
+        outline: none;
+        border-color: #667eea;
+        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+      }
+
+      .percent-sign {
+        font-weight: 600;
+        color: #667eea;
+      }
+
+      .tax-summary {
+        background: #f5f5f5;
+        padding: 20px;
+        border-radius: 8px;
+        margin-bottom: 25px;
+      }
+
+      .tax-summary h3 {
+        margin-bottom: 15px;
+        color: #333;
+        font-size: 16px;
+      }
+
+      .tax-item {
+        display: flex;
+        justify-content: space-between;
+        padding: 8px 0;
+        border-bottom: 1px solid #ddd;
+        font-size: 14px;
+      }
+
+      .tax-item:last-child {
+        border-bottom: none;
+      }
+
+      .tax-item .label {
+        color: #666;
+      }
+
+      .tax-item .value {
+        font-weight: 600;
+        color: #333;
+      }
+
+      .button-group {
+        display: flex;
+        gap: 12px;
+        margin-top: 30px;
+      }
+
+      button {
+        flex: 1;
+        padding: 14px;
+        border: none;
+        border-radius: 6px;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s;
+      }
+
+      .btn-primary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+      }
+
+      .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+      }
+
+      .btn-secondary {
+        background: #f0f0f0;
+        color: #333;
+      }
+
+      .btn-secondary:hover {
+        background: #e0e0e0;
+      }
+
+      .message {
+        padding: 15px;
+        border-radius: 6px;
+        margin-bottom: 20px;
+        font-size: 14px;
+        display: none;
+      }
+
+      .message.success {
+        background: #d4edda;
+        color: #155724;
+        border: 1px solid #c3e6cb;
+        display: block;
+      }
+
+      .message.error {
+        background: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f5c6cb;
+        display: block;
+      }
+
+      .loading {
+        display: none;
+        text-align: center;
+        color: #667eea;
+      }
+
+      .spinner {
+        border: 3px solid #f3f3f3;
+        border-top: 3px solid #667eea;
+        border-radius: 50%;
+        width: 20px;
+        height: 20px;
+        animation: spin 1s linear infinite;
+        margin: 0 auto 10px;
+      }
+
+      @keyframes spin {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
+      }
+
+      .back-link {
+        display: inline-block;
+        margin-bottom: 20px;
+        color: #667eea;
+        text-decoration: none;
+        font-size: 14px;
+        font-weight: 600;
+      }
+
+      .back-link:hover {
+        text-decoration: underline;
+      }
+
+      @media (max-width: 600px) {
+        .card-header {
+          padding: 20px;
+        }
+
+        .card-header h1 {
+          font-size: 24px;
+        }
+
+        .card-body {
+          padding: 20px;
+        }
+
+        .button-group {
+          flex-direction: column;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <a href="admin.html" class="back-link">← Back to Admin</a>
+
+      <div class="card">
+        <div class="card-header">
+          <h1>💰 Tax Settings</h1>
+          <p>Configure tax rates for North Carolina</p>
+        </div>
+
+        <div class="card-body">
+          <div id="message" class="message"></div>
+          <div id="loading" class="loading">
+            <div class="spinner"></div>
+            <p>Loading...</p>
+          </div>
+
+          <form id="taxForm">
+            <!-- NC State Tax -->
+            <div class="form-group">
+              <label>NC State Sales Tax</label>
+              <div class="description">
+                Applied to the total rental amount. Current rate: 4.75%
+              </div>
+              <div class="input-group">
+                <input
+                  type="number"
+                  id="ncState"
+                  step="0.01"
+                  min="0"
+                  max="100"
+                  placeholder="4.75"
+                  required
+                />
+                <span class="percent-sign">%</span>
+              </div>
+            </div>
+
+            <!-- Mecklenburg Local Tax -->
+            <div class="form-group">
+              <label>Mecklenburg County Local Tax</label>
+              <div class="description">
+                Applied to the total rental amount. Current rate: 2.25%
+              </div>
+              <div class="input-group">
+                <input
+                  type="number"
+                  id="mecklenburgLocal"
+                  step="0.01"
+                  min="0"
+                  max="100"
+                  placeholder="2.25"
+                  required
+                />
+                <span class="percent-sign">%</span>
+              </div>
+            </div>
+
+            <!-- Occupancy Tax -->
+            <div class="form-group">
+              <label>Occupancy Tax (Tourism/Lodging)</label>
+              <div class="description">
+                Applied to the total rental amount. Current rate: 8.00%
+              </div>
+              <div class="input-group">
+                <input
+                  type="number"
+                  id="occupancy"
+                  step="0.01"
+                  min="0"
+                  max="100"
+                  placeholder="8.00"
+                  required
+                />
+                <span class="percent-sign">%</span>
+              </div>
+            </div>
+
+            <!-- Tax Summary -->
+            <div class="tax-summary">
+              <h3>📊 Tax Preview (Example: 2 nights @ $150/night)</h3>
+              <div class="tax-item">
+                <span class="label">Subtotal:</span>
+                <span class="value">$300.00</span>
+              </div>
+              <div class="tax-item">
+                <span class="label">NC State Tax:</span>
+                <span class="value" id="previewNcTax">$14.25</span>
+              </div>
+              <div class="tax-item">
+                <span class="label">Mecklenburg Tax:</span>
+                <span class="value" id="previewMeckTax">$6.75</span>
+              </div>
+              <div class="tax-item">
+                <span class="label">Occupancy Tax:</span>
+                <span class="value" id="previewOccupancyTax">$24.00</span>
+              </div>
+              <div
+                class="tax-item"
+                style="
+                  border-bottom: 2px solid #667eea;
+                  padding-top: 12px;
+                  padding-bottom: 12px;
+                "
+              >
+                <span class="label" style="font-weight: 700; color: #667eea"
+                  >Total Tax:</span
+                >
+                <span
+                  class="value"
+                  style="color: #667eea; font-size: 16px"
+                  id="previewTotalTax"
+                  >$45.00</span
+                >
+              </div>
+              <div class="tax-item" style="padding-top: 12px">
+                <span
+                  class="label"
+                  style="font-weight: 700; font-size: 16px; color: #333"
+                  >Final Total:</span
+                >
+                <span
+                  class="value"
+                  style="font-size: 16px; color: #667eea"
+                  id="previewFinalTotal"
+                  >$345.00</span
+                >
+              </div>
+            </div>
+
+            <!-- Buttons -->
+            <div class="button-group">
+              <button type="button" class="btn-secondary" id="resetBtn">
+                Reset to Defaults
+              </button>
+              <button type="submit" class="btn-primary">
+                <i class="fas fa-save"></i> Save Settings
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // El frontend (Netlify) y el backend viven en dominios distintos.
+      // TODO: reemplazar por la URL real una vez desplegado el backend (Render/Railway/etc).
+      const PROD_API_URL = "https://REPLACE-WITH-YOUR-BACKEND-URL.onrender.com";
+      const API_URL = ["localhost", "127.0.0.1"].includes(
+        window.location.hostname,
+      )
+        ? `http://${window.location.hostname}:3001`
+        : PROD_API_URL;
+      const form = document.getElementById("taxForm");
+      const message = document.getElementById("message");
+      const loading = document.getElementById("loading");
+      const ncStateInput = document.getElementById("ncState");
+      const mecklenburgInput = document.getElementById("mecklenburgLocal");
+      const occupancyInput = document.getElementById("occupancy");
+      const resetBtn = document.getElementById("resetBtn");
+
+      // Valores por defecto
+      const DEFAULT_RATES = {
+        nc_state: 4.75,
+        mecklenburg_local: 2.25,
+        occupancy: 8.0,
+      };
+
+      // Mostrar/ocultar mensajes
+      function showMessage(text, type = "success") {
+        message.textContent = text;
+        message.className = `message ${type}`;
+        setTimeout(() => {
+          message.className = "message";
+        }, 5000);
+      }
+
+      // Calcular preview de impuestos
+      function updateTaxPreview() {
+        const subtotal = 300; // 2 noches x $150
+        const ncRate = parseFloat(ncStateInput.value) || 0;
+        const meckRate = parseFloat(mecklenburgInput.value) || 0;
+        const occRate = parseFloat(occupancyInput.value) || 0;
+
+        const ncTax = (subtotal * ncRate) / 100;
+        const meckTax = (subtotal * meckRate) / 100;
+        const occTax = (subtotal * occRate) / 100;
+        const totalTax = ncTax + meckTax + occTax;
+        const finalTotal = subtotal + totalTax;
+
+        document.getElementById("previewNcTax").textContent =
+          `$${ncTax.toFixed(2)}`;
+        document.getElementById("previewMeckTax").textContent =
+          `$${meckTax.toFixed(2)}`;
+        document.getElementById("previewOccupancyTax").textContent =
+          `$${occTax.toFixed(2)}`;
+        document.getElementById("previewTotalTax").textContent =
+          `$${totalTax.toFixed(2)}`;
+        document.getElementById("previewFinalTotal").textContent =
+          `$${finalTotal.toFixed(2)}`;
+      }
+
+      // Cargar configuración actual
+      async function loadSettings() {
+        try {
+          loading.style.display = "block";
+
+          // Obtener token del localStorage
+          const token = localStorage.getItem("admin_token");
+          if (!token) {
+            window.location.href = "admin.html";
+            return;
+          }
+
+          const response = await fetch(`${API_URL}/api/admin/tax-settings`, {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          });
+
+          if (response.status === 403 || response.status === 401) {
+            localStorage.removeItem("admin_token");
+            window.location.href = "admin.html";
+            return;
+          }
+
+          if (!response.ok) {
+            throw new Error("Failed to load tax settings");
+          }
+
+          const data = await response.json();
+          ncStateInput.value = data.nc_state || DEFAULT_RATES.nc_state;
+          mecklenburgInput.value =
+            data.mecklenburg_local || DEFAULT_RATES.mecklenburg_local;
+          occupancyInput.value = data.occupancy || DEFAULT_RATES.occupancy;
+
+          updateTaxPreview();
+          loading.style.display = "none";
+        } catch (error) {
+          console.error("Error loading settings:", error);
+          showMessage("Error loading settings. Using defaults.", "error");
+          setDefaultValues();
+          loading.style.display = "none";
+        }
+      }
+
+      // Establecer valores por defecto
+      function setDefaultValues() {
+        ncStateInput.value = DEFAULT_RATES.nc_state;
+        mecklenburgInput.value = DEFAULT_RATES.mecklenburg_local;
+        occupancyInput.value = DEFAULT_RATES.occupancy;
+        updateTaxPreview();
+      }
+
+      // Guardar configuración
+      form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+
+        try {
+          const token = localStorage.getItem("admin_token");
+          if (!token) {
+            window.location.href = "admin.html";
+            return;
+          }
+
+          const response = await fetch(`${API_URL}/api/admin/tax-settings`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({
+              nc_state: parseFloat(ncStateInput.value),
+              mecklenburg_local: parseFloat(mecklenburgInput.value),
+              occupancy: parseFloat(occupancyInput.value),
+            }),
+          });
+
+          if (response.status === 403 || response.status === 401) {
+            localStorage.removeItem("admin_token");
+            window.location.href = "admin.html";
+            return;
+          }
+
+          if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || "Failed to save settings");
+          }
+
+          showMessage("✅ Tax settings saved successfully!", "success");
+          updateTaxPreview();
+        } catch (error) {
+          console.error("Error saving settings:", error);
+          showMessage(error.message, "error");
+        }
+      });
+
+      // Botón reset
+      resetBtn.addEventListener("click", () => {
+        if (confirm("Reset to default values?")) {
+          setDefaultValues();
+          showMessage("Reset to default values", "success");
+        }
+      });
+
+      // Actualizar preview cuando cambien los valores
+      ncStateInput.addEventListener("input", updateTaxPreview);
+      mecklenburgInput.addEventListener("input", updateTaxPreview);
+      occupancyInput.addEventListener("input", updateTaxPreview);
+
+      // Cargar configuración al iniciar
+      loadSettings();
+    </script>
+  </body>
+</html>

@@ -26,7 +26,50 @@ const db = new sqlite3.Database(dbPath, (err) => {
         if (err) {
           console.error("Error al crear la tabla", err.message);
         }
-      }
+      },
+    );
+
+    // Evita reservas duplicadas si el webhook y el navegador confirman el mismo pago
+    db.run(
+      `CREATE UNIQUE INDEX IF NOT EXISTS idx_bookings_stripe_payment_id
+       ON bookings(stripePaymentId) WHERE stripePaymentId IS NOT NULL`,
+      (err) => {
+        if (err) {
+          console.error("Error al crear el índice único", err.message);
+        }
+      },
+    );
+
+    // Fechas bloqueadas importadas desde calendarios externos (ej. Airbnb)
+    db.run(
+      `CREATE TABLE IF NOT EXISTS external_blocks (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    source TEXT NOT NULL,
+    uid TEXT NOT NULL,
+    checkIn TEXT NOT NULL,
+    checkOut TEXT NOT NULL,
+    UNIQUE(source, uid)
+)`,
+      (err) => {
+        if (err) {
+          console.error("Error al crear la tabla external_blocks", err.message);
+        }
+      },
+    );
+    // Configuración de impuestos (faltaba esta tabla; el panel admin la necesita)
+    db.run(
+      `CREATE TABLE IF NOT EXISTS tax_settings (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    nc_state REAL NOT NULL,
+    mecklenburg_local REAL NOT NULL,
+    occupancy REAL NOT NULL,
+    updated_at TEXT NOT NULL
+)`,
+      (err) => {
+        if (err) {
+          console.error("Error al crear la tabla tax_settings", err.message);
+        }
+      },
     );
   }
 });

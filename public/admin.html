@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
@@ -81,14 +81,55 @@
         color: #e74c3c;
         font-style: italic;
       }
-      .status-completed {
-        color: #2ecc71;
+      .admin-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 40px;
+      }
+
+      .admin-header h1 {
+        margin: 0;
+      }
+
+      .btn-tax-settings {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        padding: 12px 20px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-weight: 600;
+        transition: all 0.3s;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 14px;
+      }
+
+      .btn-tax-settings:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+      }
+
+      @media (max-width: 768px) {
+        .admin-header {
+          flex-direction: column;
+          gap: 15px;
+          align-items: flex-start;
+        }
       }
     </style>
   </head>
   <body>
     <div class="admin-container">
-      <h1 class="admin-title">Booking Management</h1>
+      <div class="admin-header">
+        <h1 class="admin-title">📅 Booking Management</h1>
+        <a href="tax-settings.html" class="btn-tax-settings">
+          <i class="fas fa-cog"></i> Configure Tax Rates
+        </a>
+      </div>
 
       <div class="bookings-section">
         <h2>Active Bookings</h2>
@@ -137,11 +178,20 @@
     </div>
 
     <script>
+      // El frontend (Netlify) y el backend viven en dominios distintos.
+      // TODO: reemplazar por la URL real una vez desplegado el backend (Render/Railway/etc).
+      const PROD_API_URL = "https://REPLACE-WITH-YOUR-BACKEND-URL.onrender.com";
+      const API_URL = ["localhost", "127.0.0.1"].includes(
+        window.location.hostname,
+      )
+        ? `http://${window.location.hostname}:3001`
+        : PROD_API_URL;
+
       document.addEventListener("DOMContentLoaded", () => {
-        // --- PARTE 1: VERIFICACIÓN Y REFERENCIAS (se mantiene igual) ---
-        const token = localStorage.getItem("adminToken");
+        // --- VERIFICACIÓN Y REFERENCIAS ---
+        const token = localStorage.getItem("admin_token");
         if (!token) {
-          window.location.href = "/login.html";
+          window.location.href = "login.html";
           return;
         }
 
@@ -150,34 +200,46 @@
         const noActiveMsg = document.getElementById("no-active-bookings");
         const noPastMsg = document.getElementById("no-past-bookings");
 
-        // --- PARTE 2: NUEVA LÓGICA DE WEBSOCKETS (se añade aquí) ---
-        // Construimos la URL del WebSocket. 'wss' es para producción (HTTPS), 'ws' para local (HTTP).
+        // --- WEBSOCKET ---
         const wsProtocol = window.location.protocol === "https:" ? "wss" : "ws";
-        const wsUrl = `${wsProtocol}://${window.location.host}`;
-        const socket = new WebSocket(wsUrl);
+        const wsUrl = `${wsProtocol}://${API_URL.replace(/^https?:\/\//, "")}`;
+        let socket = null;
 
-        // Escuchamos mensajes del servidor
-        socket.addEventListener("message", (event) => {
-          // Si el servidor nos dice que las reservas han cambiado...
-          if (event.data === "bookings_updated") {
-            console.log("Update received from server. Refreshing bookings...");
-            // ...volvemos a cargar los datos sin necesidad de recargar la página.
-            fetchAndRenderBookings();
+        function connectWebSocket() {
+          try {
+            socket = new WebSocket(wsUrl);
+
+            socket.addEventListener("message", (event) => {
+              const message = JSON.parse(event.data);
+              if (message.type === "bookings_updated") {
+                console.log(
+                  "Update received from server. Refreshing bookings...",
+                );
+                fetchAndRenderBookings();
+              }
+            });
+
+            socket.addEventListener("open", () => {
+              console.log("WebSocket connection established.");
+            });
+
+            socket.addEventListener("close", () => {
+              console.log(
+                "WebSocket connection closed. Attempting to reconnect...",
+              );
+              setTimeout(connectWebSocket, 3000);
+            });
+
+            socket.addEventListener("error", (error) => {
+              console.error("WebSocket error:", error);
+            });
+          } catch (error) {
+            console.error("WebSocket connection error:", error);
+            setTimeout(connectWebSocket, 3000);
           }
-        });
+        }
 
-        socket.addEventListener("open", () => {
-          console.log("WebSocket connection established.");
-        });
-
-        socket.addEventListener("close", () => {
-          console.log(
-            "WebSocket connection closed. Attempting to reconnect..."
-          );
-          // Podríamos añadir lógica de reconexión aquí si fuera necesario
-        });
-
-        // --- PARTE 3: FUNCIONES DE AYUDA (se mantienen igual) ---
+        // --- FUNCIONES DE AYUDA ---
         async function fetchWithAuth(url, options = {}) {
           const headers = {
             ...options.headers,
@@ -186,8 +248,8 @@
           };
           const response = await fetch(url, { ...options, headers });
           if (response.status === 401 || response.status === 403) {
-            localStorage.removeItem("adminToken");
-            window.location.href = "/login.html";
+            localStorage.removeItem("admin_token");
+            window.location.href = "login.html";
             throw new Error("Session expired or invalid.");
           }
           return response;
@@ -196,17 +258,15 @@
         function createRow(booking) {
           const tr = document.createElement("tr");
           const statusClass = `status-${booking.bookingStatus}`;
+          const checkOutDate = new Date(booking.checkOut);
           const isPastOrCancelled =
-            booking.bookingStatus !== "confirmed" ||
-            new Date(booking.checkOut) < new Date();
+            booking.bookingStatus !== "confirmed" || checkOutDate < new Date();
 
           tr.innerHTML = `
                 <td>${booking.id}</td>
-                <td>${new Date(booking.checkIn).toLocaleDateString(
-                  "en-US"
-                )}</td>
+                <td>${checkOutDate.toLocaleDateString("en-US")}</td>
                 <td>${new Date(booking.checkOut).toLocaleDateString(
-                  "en-US"
+                  "en-US",
                 )}</td>
                 ${
                   isPastOrCancelled
@@ -239,16 +299,18 @@
               : "none";
           bookings.active.forEach((b) => activeTbody.appendChild(createRow(b)));
           bookings.completed.forEach((b) =>
-            pastTbody.appendChild(createRow(b))
+            pastTbody.appendChild(createRow(b)),
           );
           bookings.cancelled.forEach((b) =>
-            pastTbody.appendChild(createRow(b))
+            pastTbody.appendChild(createRow(b)),
           );
         }
 
         async function fetchAndRenderBookings() {
           try {
-            const response = await fetchWithAuth("/api/admin/bookings");
+            const response = await fetchWithAuth(
+              `${API_URL}/api/admin/bookings`,
+            );
             const bookingsData = await response.json();
             renderBookings(bookingsData);
           } catch (error) {
@@ -256,7 +318,7 @@
           }
         }
 
-        // --- PARTE 4: LÓGICA DE CLICS EN BOTONES (se mantiene igual) ---
+        // --- LÓGICA DE CLICS EN BOTONES ---
         document
           .querySelector(".admin-container")
           .addEventListener("click", async (e) => {
@@ -267,33 +329,43 @@
             if (target.classList.contains("btn-cancel")) {
               if (
                 confirm(
-                  `Are you sure you want to cancel booking #${bookingId}?`
+                  `Are you sure you want to cancel booking #${bookingId}?`,
                 )
               ) {
-                await fetchWithAuth(`/api/admin/bookings/${bookingId}/cancel`, {
-                  method: "POST",
-                });
-                // Ya no necesitamos llamar a fetchAndRenderBookings() aquí,
-                // porque el backend enviará un mensaje WebSocket y eso activará la actualización.
+                try {
+                  await fetchWithAuth(
+                    `${API_URL}/api/admin/bookings/${bookingId}/cancel`,
+                    { method: "POST" },
+                  );
+                } catch (error) {
+                  console.error("Error cancelling booking:", error);
+                }
               }
             }
 
             if (target.classList.contains("btn-delete")) {
               if (
                 confirm(
-                  `ARE YOU SURE you want to PERMANENTLY DELETE booking #${bookingId}?`
+                  `ARE YOU SURE you want to PERMANENTLY DELETE booking #${bookingId}?`,
                 )
               ) {
-                await fetchWithAuth(`/api/admin/bookings/${bookingId}`, {
-                  method: "DELETE",
-                });
-                // Lo mismo aquí, el WebSocket se encarga de la actualización.
+                try {
+                  await fetchWithAuth(
+                    `${API_URL}/api/admin/bookings/${bookingId}`,
+                    {
+                      method: "DELETE",
+                    },
+                  );
+                } catch (error) {
+                  console.error("Error deleting booking:", error);
+                }
               }
             }
           });
 
-        // --- PARTE 5: PUNTO DE ENTRADA (se mantiene igual) ---
+        // --- INICIALIZAR ---
         fetchAndRenderBookings();
+        connectWebSocket();
       });
     </script>
   </body>

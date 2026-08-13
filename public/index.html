@@ -1,9 +1,12 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Lakeside Serenity in Davidson | Modern 2-Bedroom Rental</title>
+
+    <!-- FAVICON -->
+    <link rel="icon" type="image/png" href="images/lake_favicon.png" />
 
     <!-- Librerías CSS -->
     <link
@@ -229,6 +232,15 @@
               <div class="swiper-slide">
                 <img src="images/25.jpg" alt="25" />
               </div>
+              <div class="swiper-slide">
+                <img src="images/26.jpg" alt="26" />
+              </div>
+              <div class="swiper-slide">
+                <img src="images/27.jpg" alt="27" />
+              </div>
+              <div class="swiper-slide">
+                <img src="images/28.jpg" alt="28" />
+              </div>
             </div>
             <div class="swiper-button-next"></div>
             <div class="swiper-button-prev"></div>
@@ -285,24 +297,139 @@
 
       <section id="contact" class="reservation-section">
         <div class="container">
-          <h2 class="section-title">Ready to Book Your Stay?</h2>
-          <p>
-            Check availability and book your unforgettable stay directly on
-            Airbnb!
+          <h2 class="section-title">Book Your Stay</h2>
+          <p class="section-subtitle">
+            Direct booking with Stripe payment • Safe and Secure
           </p>
 
-          <div class="airbnb-button-wrapper">
-            <a
-              href="https://www.airbnb.com.ec/rooms/732102319759567131?viralityEntryPoint=1&s=76&_set_bev_on_new_domain=1761410183_EAYzYyYjgyN2MxYW&source_impression_id=p3_1761586481_P3S3SGED0Ux4sxro#availability-calendar"
-              target="_blank"
-              class="airbnb-button-image-link"
-            >
-              <img
-                src="images/airbnb-logo-full.png"
-                alt="Book on Airbnb"
-                class="airbnb-custom-button"
-              />
-            </a>
+          <div class="booking-card">
+            <div id="booking-message" class="booking-message"></div>
+
+            <form id="booking-form">
+              <div class="booking-form-grid">
+                <!-- Check-in -->
+                <div class="form-group">
+                  <label for="checkin">
+                    <i class="fas fa-calendar-check"></i> Check-in Date
+                  </label>
+                  <input
+                    type="date"
+                    id="checkin"
+                    name="checkin"
+                    required
+                    placeholder="Select check-in date"
+                  />
+                </div>
+
+                <!-- Check-out -->
+                <div class="form-group">
+                  <label for="checkout">
+                    <i class="fas fa-calendar-times"></i> Check-out Date
+                  </label>
+                  <input
+                    type="date"
+                    id="checkout"
+                    name="checkout"
+                    required
+                    placeholder="Select check-out date"
+                  />
+                </div>
+              </div>
+
+              <!-- Price Display -->
+              <div id="price-display" class="price-display"></div>
+
+              <!-- Submit Button -->
+              <button type="submit" class="btn btn-primary btn-book">
+                <i class="fas fa-lock"></i> Proceed to Payment
+              </button>
+            </form>
+
+            <!-- Booking Confirmation Modal -->
+            <div id="confirm-modal" class="confirm-modal-overlay">
+              <div class="confirm-modal">
+                <h3><i class="fas fa-receipt"></i> Reservation Summary</h3>
+
+                <div class="confirm-modal-section">
+                  <div class="confirm-modal-row">
+                    <span>Check-in</span>
+                    <strong id="confirm-checkin"></strong>
+                  </div>
+                  <div class="confirm-modal-row">
+                    <span>Check-out</span>
+                    <strong id="confirm-checkout"></strong>
+                  </div>
+                  <div class="confirm-modal-row">
+                    <span>Nights</span>
+                    <strong id="confirm-nights"></strong>
+                  </div>
+                </div>
+
+                <div class="confirm-modal-section">
+                  <div class="confirm-modal-row">
+                    <span>Base</span>
+                    <strong id="confirm-base"></strong>
+                  </div>
+                  <div class="confirm-modal-row">
+                    <span>NC Tax</span>
+                    <strong id="confirm-nc-tax"></strong>
+                  </div>
+                  <div class="confirm-modal-row">
+                    <span>Meck Tax</span>
+                    <strong id="confirm-meck-tax"></strong>
+                  </div>
+                  <div class="confirm-modal-row">
+                    <span>Occupancy</span>
+                    <strong id="confirm-occupancy"></strong>
+                  </div>
+                  <div class="confirm-modal-row confirm-modal-total">
+                    <span>Total</span>
+                    <strong id="confirm-total"></strong>
+                  </div>
+                </div>
+
+                <p class="confirm-modal-question">
+                  You will be redirected to Stripe to complete your payment
+                  securely.
+                </p>
+
+                <div class="confirm-modal-actions">
+                  <button
+                    type="button"
+                    id="confirm-cancel"
+                    class="confirm-modal-btn confirm-modal-btn-cancel"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    id="confirm-accept"
+                    class="confirm-modal-btn confirm-modal-btn-pay"
+                  >
+                    <i class="fa-brands fa-cc-stripe"></i> Pay with Stripe
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Alternative: Airbnb Button -->
+            <div class="booking-divider">
+              <span>or book on</span>
+            </div>
+
+            <div class="airbnb-button-wrapper">
+              <a
+                href="https://www.airbnb.com.ec/rooms/732102319759567131?viralityEntryPoint=1&s=76&_set_bev_on_new_domain=1761410183_EAYzYyYjgyN2MxYW&source_impression_id=p3_1761586481_P3S3SGED0Ux4sxro#availability-calendar"
+                target="_blank"
+                class="airbnb-button-image-link"
+              >
+                <img
+                  src="images/airbnb-logo-full.png"
+                  alt="Book on Airbnb"
+                  class="airbnb-custom-button"
+                />
+              </a>
+            </div>
           </div>
         </div>
       </section>
@@ -320,6 +447,7 @@
     <!-- SCRIPTS -->
     <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
     <script src="https://unpkg.com/aos@next/dist/aos.js"></script>
+    <script src="booking.js"></script>
 
     <script>
       document.addEventListener("DOMContentLoaded", () => {
