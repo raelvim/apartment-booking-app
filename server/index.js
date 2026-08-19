@@ -32,6 +32,9 @@ const MOCK_PAYMENTS =
   NODE_ENV !== "production" && process.env.MOCK_PAYMENTS === "true";
 const mockSessions = new Map(); // sesiones falsas en memoria, solo para MOCK_PAYMENTS
 
+// Servir archivos estáticos desde public/
+app.use(express.static(path.join(__dirname, "..", "public")));
+
 // No arrancar sin secretos configurados: evita contraseñas/JWT por defecto inseguros
 if (!ADMIN_PASSWORD || !JWT_SECRET) {
   console.error(
