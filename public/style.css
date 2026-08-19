@@ -1012,61 +1012,61 @@ footer p {
   opacity: 0.5;
 }
 
+/* ===== HEADER DEL CALENDARIO ===== */
+/* Mantener el ancho original, aumentar la altura vertical */
 .flatpickr-months .flatpickr-month {
   background: var(--color-primary) !important;
   color: #fff !important;
   border-radius: 12px 12px 0 0 !important;
-  height: auto !important;
+  height: 50px !important;
   line-height: 1 !important;
   overflow: visible !important;
 }
 
 .flatpickr-current-month {
-  font-size: 15px !important;
+  font-size: 16px !important;
   font-weight: 600 !important;
-  padding: 6px 0 !important;
+  padding: 14px 0 !important;
   line-height: 1 !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
 }
 
 .flatpickr-current-month .flatpickr-monthDropdown-months {
   color: #fff !important;
   font-weight: 600 !important;
-  font-size: 15px !important;
-  padding: 2px 4px !important;
+  font-size: 16px !important;
 }
 
 .flatpickr-current-month input.cur-year {
   color: #fff !important;
   font-weight: 600 !important;
-  font-size: 15px !important;
-  padding: 2px 4px !important;
+  font-size: 16px !important;
 }
 
-/* Botones de mes - más grandes y con espacio */
+/* Botones de flecha - ancho original, más alto verticalmente */
 .flatpickr-prev-month,
 .flatpickr-next-month {
-  padding: 8px 12px !important;
-  margin: 2px 6px !important;
+  padding: 14px 16px !important;
+  margin: 0 !important;
   border-radius: 8px !important;
   transition: all 0.2s ease !important;
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
-  position: relative !important;
-  top: auto !important;
-  transform: none !important;
+  height: 100% !important;
+  box-sizing: border-box !important;
 }
 
 .flatpickr-prev-month:hover,
 .flatpickr-next-month:hover {
   background: rgba(255, 255, 255, 0.25) !important;
-  transform: scale(1.08) !important;
 }
 
 .flatpickr-prev-month svg,
 .flatpickr-next-month svg {
-  width: 16px !important;
-  height: 16px !important;
+  width: 20px !important;
+  height: 20px !important;
   fill: #fff !important;
 }
 
