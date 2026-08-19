@@ -49,15 +49,26 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // ============ FLATPICKR ============
 
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
   const commonOpts = {
     dateFormat: "Y-m-d",
     disableMobile: true,
-    disable: [isDateDisabled], // ← función, no objetos Date
+    disable: [isDateDisabled],
     locale: {
       firstDayOfWeek: 0,
       rangeSeparator: " → ",
       scrollTitle: "Scroll to change",
       toggleTitle: "Click to toggle",
+    },
+    // Marcar fechas pasadas con clase CSS (gris, no clickeable)
+    onDayCreate: function (dObj, dStr, fp, dayElem) {
+      const dayDate = new Date(dayElem.dateObj);
+      dayDate.setHours(0, 0, 0, 0);
+      if (dayDate < today) {
+        dayElem.classList.add("past-date");
+      }
     },
   };
 

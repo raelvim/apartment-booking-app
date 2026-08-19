@@ -1044,18 +1044,29 @@ footer p {
   font-size: 16px !important;
 }
 
-/* Botones de flecha - ancho original, más alto verticalmente */
+/* Botones de flecha - mismo alto que el header, sin desbordarse */
 .flatpickr-prev-month,
 .flatpickr-next-month {
-  padding: 14px 16px !important;
+  padding: 0 14px !important;
   margin: 0 !important;
-  border-radius: 8px !important;
+  border-radius: 0 !important;
   transition: all 0.2s ease !important;
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
-  height: 100% !important;
+  height: 50px !important;
   box-sizing: border-box !important;
+  position: absolute !important;
+  top: 0 !important;
+  z-index: 3 !important;
+}
+
+.flatpickr-prev-month {
+  left: 0 !important;
+}
+
+.flatpickr-next-month {
+  right: 0 !important;
 }
 
 .flatpickr-prev-month:hover,
@@ -1065,14 +1076,23 @@ footer p {
 
 .flatpickr-prev-month svg,
 .flatpickr-next-month svg {
-  width: 20px !important;
-  height: 20px !important;
+  width: 18px !important;
+  height: 18px !important;
   fill: #fff !important;
 }
 
 span.flatpickr-weekday {
   color: var(--color-primary) !important;
   font-weight: 600 !important;
+}
+
+/* Fechas pasadas - gris, no seleccionables, sin tachar */
+.flatpickr-day.past-date {
+  color: #ccc !important;
+  background: #fafafa !important;
+  border-color: #f0f0f0 !important;
+  cursor: not-allowed !important;
+  pointer-events: none !important;
 }
 
 /* Input fields when using flatpickr */
