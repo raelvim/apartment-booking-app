@@ -1016,12 +1016,38 @@ footer p {
   background: var(--color-primary) !important;
   color: #fff !important;
   border-radius: 12px 12px 0 0 !important;
+  padding: 8px 0 !important;
 }
 
 .flatpickr-current-month .flatpickr-monthDropdown-months,
 .flatpickr-current-month input.cur-year {
   color: #fff !important;
   font-weight: 600 !important;
+}
+
+/* Botones de mes - más grandes y con espacio */
+.flatpickr-prev-month,
+.flatpickr-next-month {
+  padding: 10px 14px !important;
+  margin: 4px 8px !important;
+  border-radius: 8px !important;
+  transition: all 0.2s ease !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.flatpickr-prev-month:hover,
+.flatpickr-next-month:hover {
+  background: rgba(255, 255, 255, 0.2) !important;
+  transform: scale(1.1) !important;
+}
+
+.flatpickr-prev-month svg,
+.flatpickr-next-month svg {
+  width: 18px !important;
+  height: 18px !important;
+  fill: #fff !important;
 }
 
 span.flatpickr-weekday {

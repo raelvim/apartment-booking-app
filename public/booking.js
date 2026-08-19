@@ -32,22 +32,25 @@ document.addEventListener("DOMContentLoaded", () => {
     return dates;
   }
 
-  // Inicializar flatpickr para check-in
+  // Inicializar flatpickr para check-in (mínimo mañana)
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+
   const checkinPicker = flatpickr("#checkin", {
     dateFormat: "Y-m-d",
-    minDate: "today",
+    minDate: tomorrow,
     disableMobile: true,
     locale: "es",
     onChange: function (selectedDates, dateStr) {
       if (selectedDates.length > 0) {
-        // Checkout mínimo = día siguiente al checkin
-        const nextDay = new Date(selectedDates[0]);
-        nextDay.setDate(nextDay.getDate() + 1);
-        checkoutPicker.set("minDate", nextDay);
+        // Checkout mínimo = checkin + MIN_NIGHTS días
+        const minCheckout = new Date(selectedDates[0]);
+        minCheckout.setDate(minCheckout.getDate() + MIN_NIGHTS);
+        checkoutPicker.set("minDate", minCheckout);
 
         // Si checkout actual es menor al nuevo mínimo, limpiarlo
         const currentCheckout = checkoutPicker.selectedDates[0];
-        if (currentCheckout && currentCheckout <= selectedDates[0]) {
+        if (currentCheckout && currentCheckout < minCheckout) {
           checkoutPicker.clear();
         }
       }
@@ -55,10 +58,12 @@ document.addEventListener("DOMContentLoaded", () => {
     },
   });
 
+  const MIN_NIGHTS = 10;
+
   // Inicializar flatpickr para check-out
   const checkoutPicker = flatpickr("#checkout", {
     dateFormat: "Y-m-d",
-    minDate: "today",
+    minDate: tomorrow,
     disableMobile: true,
     locale: "es",
     onChange: function () {
@@ -244,6 +249,12 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     const nights = Math.round((checkOutDate - checkInDate) / (1000 * 60 * 60 * 24));
+
+    if (nights < MIN_NIGHTS) {
+      bookingMessage.textContent = `Minimum stay is ${MIN_NIGHTS} nights. Please select a longer period.`;
+      bookingMessage.className = "booking-message error";
+      return;
+    }
 
     try {
       bookingMessage.textContent = "Calculating price...";
