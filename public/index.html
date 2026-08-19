@@ -23,6 +23,10 @@
 
     <link rel="stylesheet" href="https://unpkg.com/aos@next/dist/aos.css" />
 
+    <!-- Flatpickr - Calendario con fechas bloqueadas -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/themes/airbnb.css" />
+
     <!-- Hoja de Estilos -->
     <link rel="stylesheet" href="style.css" />
   </head>
@@ -336,6 +340,12 @@
                 </div>
               </div>
 
+              <!-- Leyenda de fechas -->
+              <div class="date-legend">
+                <span class="date-legend-dot booked">✗</span>
+                <span>Unavailable dates (booked on other platforms)</span>
+              </div>
+
               <!-- Price Display -->
               <div id="price-display" class="price-display"></div>
 
@@ -447,6 +457,8 @@
     <!-- SCRIPTS -->
     <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
     <script src="https://unpkg.com/aos@next/dist/aos.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/es.js"></script>
     <script src="booking.js"></script>
 
     <script>

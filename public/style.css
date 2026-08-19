@@ -959,3 +959,107 @@ footer p {
     gap: 6px;
   }
 }
+
+/* ============================ */
+/* FLATPICKR - Fechas bloqueadas */
+/* ============================ */
+
+.flatpickr-calendar {
+  border-radius: 12px !important;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15) !important;
+  border: 1px solid #e0e0e0 !important;
+  font-family: var(--font-body) !important;
+}
+
+.flatpickr-day {
+  border-radius: 8px !important;
+  transition: all 0.2s ease !important;
+  font-size: 14px !important;
+}
+
+.flatpickr-day:hover:not(.flatpickr-disabled):not(.selected) {
+  background: var(--color-primary) !important;
+  color: #fff !important;
+  border-color: var(--color-primary) !important;
+}
+
+.flatpickr-day.selected {
+  background: var(--color-primary) !important;
+  border-color: var(--color-primary) !important;
+  color: #fff !important;
+}
+
+/* 🔴 FECHAS BLOQUEADAS - Tachadas y no clickeables */
+.flatpickr-day.flatpickr-disabled {
+  color: #ccc !important;
+  background: #f5f5f5 !important;
+  border-color: #f0f0f0 !important;
+  cursor: not-allowed !important;
+  text-decoration: line-through !important;
+  text-decoration-color: #e74c3c !important;
+  text-decoration-thickness: 2px !important;
+  position: relative !important;
+}
+
+.flatpickr-day.flatpickr-disabled::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 10%;
+  right: 10%;
+  height: 1px;
+  background: #e74c3c;
+  opacity: 0.5;
+}
+
+.flatpickr-months .flatpickr-month {
+  background: var(--color-primary) !important;
+  color: #fff !important;
+  border-radius: 12px 12px 0 0 !important;
+}
+
+.flatpickr-current-month .flatpickr-monthDropdown-months,
+.flatpickr-current-month input.cur-year {
+  color: #fff !important;
+  font-weight: 600 !important;
+}
+
+span.flatpickr-weekday {
+  color: var(--color-primary) !important;
+  font-weight: 600 !important;
+}
+
+/* Input fields when using flatpickr */
+.booking-card .form-group input.flatpickr-input {
+  cursor: pointer !important;
+  background: #fff !important;
+}
+
+/* Leyenda de fechas no disponibles */
+.date-legend {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  font-size: 12px;
+  color: #999;
+}
+
+.date-legend-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  border: 1px solid #e0e0e0;
+}
+
+.date-legend-dot.booked {
+  background: #f5f5f5;
+  border-color: #e74c3c;
+  text-decoration: line-through;
+  color: #e74c3c;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 8px;
+  font-weight: bold;
+}
