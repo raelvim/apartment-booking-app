@@ -1,9 +1,10 @@
-// booking.js - Lógica de reservas con flatpickr (fechas bloqueadas visualmente)
+// booking.js - Calendario con fechas bloqueadas por Airbnb/Bookings
 const PRICE_PER_NIGHT = 150;
 const PROD_API_URL = "https://escapelakenorman-api.onrender.com";
 const API_URL = ["localhost", "127.0.0.1"].includes(window.location.hostname)
   ? `http://${window.location.hostname}:3001`
   : PROD_API_URL;
+const MIN_NIGHTS = 10;
 
 document.addEventListener("DOMContentLoaded", () => {
   const bookingForm = document.getElementById("booking-form");
@@ -15,33 +16,55 @@ document.addEventListener("DOMContentLoaded", () => {
 
   if (!bookingForm) return;
 
-  // Estado de fechas bloqueadas
+  // Estado de fechas bloqueadas (rangos completos)
   let bookedDateRanges = [];
 
-  // Generar array de fechas individuales bloqueadas (para flatpickr disable)
-  function getBlockedDates() {
-    const dates = [];
-    bookedDateRanges.forEach((range) => {
-      let current = new Date(range.from);
-      const end = new Date(range.to);
-      while (current < end) {
-        dates.push(new Date(current));
-        current.setDate(current.getDate() + 1);
+  /**
+   * Función que flatpickr usa para bloquear fechas.
+   * Compara cada día del calendario contra los rangos bloqueados.
+   */
+  function isDateDisabled(date) {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, "0");
+    const d = String(date.getDate()).padStart(2, "0");
+    const dateStr = `${y}-${m}-${d}`;
+
+    for (const range of bookedDateRanges) {
+      if (dateStr >= range.from && dateStr < range.to) {
+        return true; // bloqueada
       }
-    });
-    return dates;
+    }
+    return false; // disponible
   }
 
-  // Inicializar flatpickr para check-in (mínimo mañana)
-  const tomorrow = new Date();
-  tomorrow.setDate(tomorrow.getDate() + 1);
+  /**
+   * Formatear Date a YYYY-MM-DD (local, sin UTC)
+   */
+  function formatDateLocal(date) {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, "0");
+    const d = String(date.getDate()).padStart(2, "0");
+    return `${y}-${m}-${d}`;
+  }
 
-  const checkinPicker = flatpickr("#checkin", {
+  // ============ FLATPICKR ============
+
+  const commonOpts = {
     dateFormat: "Y-m-d",
-    minDate: tomorrow,
     disableMobile: true,
-    locale: "es",
-    onChange: function (selectedDates, dateStr) {
+    disable: [isDateDisabled], // ← función, no objetos Date
+    locale: {
+      firstDayOfWeek: 0,
+      rangeSeparator: " → ",
+      scrollTitle: "Scroll to change",
+      toggleTitle: "Click to toggle",
+    },
+  };
+
+  // Check-in: hoy es selectable si no está bloqueado
+  const checkinPicker = flatpickr("#checkin", {
+    ...commonOpts,
+    onChange: function (selectedDates) {
       if (selectedDates.length > 0) {
         // Checkout mínimo = checkin + MIN_NIGHTS días
         const minCheckout = new Date(selectedDates[0]);
@@ -58,90 +81,62 @@ document.addEventListener("DOMContentLoaded", () => {
     },
   });
 
-  const MIN_NIGHTS = 10;
-
-  // Inicializar flatpickr para check-out
+  // Check-out: hoy es selectable si no está bloqueado
   const checkoutPicker = flatpickr("#checkout", {
-    dateFormat: "Y-m-d",
-    minDate: tomorrow,
-    disableMobile: true,
-    locale: "es",
+    ...commonOpts,
     onChange: function () {
       updatePriceDisplay();
     },
   });
 
-  // Función para actualizar las fechas bloqueadas en ambos pickers
-  function refreshDisabledDates() {
-    const blocked = getBlockedDates();
-    checkinPicker.set("disable", blocked);
-    checkoutPicker.set("disable", blocked);
-  }
+  // ============ FECHAS BLOQUEADAS ============
 
-  // Cargar fechas reservadas desde el servidor
   fetchBookedDates();
-
-  // Actualizar cada 30 segundos
   setInterval(fetchBookedDates, 30000);
 
-  /**
-   * Cargar fechas no disponibles desde el servidor
-   */
   async function fetchBookedDates() {
     try {
       const response = await fetch(`${API_URL}/api/bookings`);
       if (response.ok) {
         bookedDateRanges = await response.json();
-        refreshDisabledDates();
+        // Refrescar los calendarios con las nuevas fechas
+        checkinPicker.set("disable", [isDateDisabled]);
+        checkoutPicker.set("disable", [isDateDisabled]);
       }
     } catch (error) {
       console.error("Error fetching booked dates:", error);
     }
   }
 
-  /**
-   * Validar si una fecha individual está reservada
-   */
-  function isDateBooked(date) {
-    const dateStr = date.toISOString().split("T")[0];
-    return bookedDateRanges.some((range) => {
-      const from = new Date(range.from);
-      const to = new Date(range.to);
-      return date >= from && date < to;
-    });
-  }
+  // ============ VALIDACIONES ============
 
-  /**
-   * Validar rango de fechas completo
-   */
-  function isRangeAvailable(checkIn, checkOut) {
-    let current = new Date(checkIn);
-    const end = new Date(checkOut);
+  function isRangeAvailable(checkInDate, checkOutDate) {
+    let current = new Date(checkInDate);
+    const end = new Date(checkOutDate);
     while (current < end) {
-      if (isDateBooked(current)) return false;
+      if (isDateDisabled(current)) return false;
       current.setDate(current.getDate() + 1);
     }
     return true;
   }
 
-  /**
-   * Actualizar display de precio
-   */
+  // ============ PRECIO ============
+
   async function updatePriceDisplay() {
-    const checkIn = checkinPicker.selectedDates[0];
-    const checkOut = checkoutPicker.selectedDates[0];
+    const checkInDate = checkinPicker.selectedDates[0];
+    const checkOutDate = checkoutPicker.selectedDates[0];
 
-    if (!checkIn || !checkOut) {
+    if (!checkInDate || !checkOutDate) {
       if (priceDisplay) priceDisplay.innerHTML = "";
       return;
     }
 
-    if (checkOut <= checkIn) {
+    if (checkOutDate <= checkInDate) {
       if (priceDisplay) priceDisplay.innerHTML = "";
       return;
     }
 
-    const nights = Math.round((checkOut - checkIn) / (1000 * 60 * 60 * 24));
+    const nights = Math.round((checkOutDate - checkInDate) / (1000 * 60 * 60 * 24));
 
     try {
       const response = await fetch(`${API_URL}/api/calculate-price`, {
@@ -184,9 +179,8 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  /**
-   * Mostrar modal de confirmación
-   */
+  // ============ MODAL DE CONFIRMACIÓN ============
+
   function showBookingConfirmation({ checkIn, checkOut, nights, pricing }) {
     document.getElementById("confirm-checkin").textContent = checkIn;
     document.getElementById("confirm-checkout").textContent = checkOut;
@@ -213,9 +207,8 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  /**
-   * Manejar envío del formulario
-   */
+  // ============ ENVÍO DEL FORMULARIO ============
+
   bookingForm.addEventListener("submit", async (e) => {
     e.preventDefault();
     bookingMessage.textContent = "";
@@ -230,20 +223,11 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
-    const checkIn = checkinPicker.formatDate(checkInDate, "Y-m-d");
-    const checkOut = checkoutPicker.formatDate(checkOutDate, "Y-m-d");
+    const checkIn = formatDateLocal(checkInDate);
+    const checkOut = formatDateLocal(checkOutDate);
 
     if (new Date(checkOut) <= new Date(checkIn)) {
       bookingMessage.textContent = "Check-out date must be after check-in date.";
-      bookingMessage.className = "booking-message error";
-      return;
-    }
-
-    // Recargar fechas antes de validar (puede haber cambios recientes)
-    await fetchBookedDates();
-
-    if (!isRangeAvailable(checkInDate, checkOutDate)) {
-      bookingMessage.textContent = "One or more dates in this range are no longer available. Please select different dates.";
       bookingMessage.className = "booking-message error";
       return;
     }
@@ -252,6 +236,15 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (nights < MIN_NIGHTS) {
       bookingMessage.textContent = `Minimum stay is ${MIN_NIGHTS} nights. Please select a longer period.`;
+      bookingMessage.className = "booking-message error";
+      return;
+    }
+
+    // Recargar fechas antes de validar
+    await fetchBookedDates();
+
+    if (!isRangeAvailable(checkInDate, checkOutDate)) {
+      bookingMessage.textContent = "One or more dates in this range are no longer available. Please select different dates.";
       bookingMessage.className = "booking-message error";
       return;
     }
