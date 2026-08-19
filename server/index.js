@@ -11,7 +11,12 @@ const WebSocket = require("ws");
 const ical = require("node-ical");
 
 const db = require("./database.js");
-const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
+
+// Stripe se inicializa solo si hay clave real; en modo mock no se necesita.
+let stripe = null;
+if (process.env.STRIPE_SECRET_KEY) {
+  stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
+}
 
 const app = express();
 const PORT = process.env.PORT || 3001;

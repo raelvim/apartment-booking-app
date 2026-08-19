@@ -2,7 +2,7 @@
 const PRICE_PER_NIGHT = 150; // $150 por noche
 // El frontend (Netlify) y el backend viven en dominios distintos.
 // TODO: reemplazar por la URL real una vez desplegado el backend (Render/Railway/etc).
-const PROD_API_URL = "https://REPLACE-WITH-YOUR-BACKEND-URL.onrender.com";
+const PROD_API_URL = "https://escapelakenorman-api.onrender.com";
 const API_URL = ["localhost", "127.0.0.1"].includes(window.location.hostname)
   ? `http://${window.location.hostname}:3001`
   : PROD_API_URL;
