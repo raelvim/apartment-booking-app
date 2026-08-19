@@ -675,7 +675,7 @@ server.listen(PORT, () => {
 
   if (AIRBNB_ICAL_URL) {
     syncAirbnbCalendar();
-    setInterval(syncAirbnbCalendar, 60 * 60 * 1000); // cada hora
+    setInterval(syncAirbnbCalendar, 15 * 60 * 1000); // cada hora
   } else {
     console.log(
       "ℹ️ AIRBNB_ICAL_URL no configurado: sincronización con Airbnb desactivada.",
