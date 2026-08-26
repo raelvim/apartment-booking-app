@@ -310,40 +310,93 @@
             <div id="booking-message" class="booking-message"></div>
 
             <form id="booking-form">
-              <div class="booking-form-grid">
-                <!-- Check-in -->
-                <div class="form-group">
-                  <label for="checkin">
-                    <i class="fas fa-calendar-check"></i> Check-in Date
-                  </label>
-                  <input
-                    type="date"
-                    id="checkin"
-                    name="checkin"
-                    required
-                    placeholder="Select check-in date"
-                  />
-                </div>
-
-                <!-- Check-out -->
-                <div class="form-group">
-                  <label for="checkout">
-                    <i class="fas fa-calendar-times"></i> Check-out Date
-                  </label>
-                  <input
-                    type="date"
-                    id="checkout"
-                    name="checkout"
-                    required
-                    placeholder="Select check-out date"
-                  />
-                </div>
+              <!-- Rental Type Toggle -->
+              <div class="rental-type-toggle">
+                <button type="button" class="rental-type-btn active" data-type="short_stay">
+                  <i class="fas fa-moon"></i> Short Stay
+                </button>
+                <button type="button" class="rental-type-btn" data-type="monthly">
+                  <i class="fas fa-calendar-alt"></i> Monthly Rental
+                </button>
               </div>
 
-              <!-- Leyenda de fechas -->
-              <div class="date-legend">
-                <span class="date-legend-dot booked">✗</span>
-                <span>Unavailable dates &bull; Minimum stay: 10 nights</span>
+              <!-- Short Stay Fields -->
+              <div id="short-stay-fields">
+                <div class="booking-form-grid">
+                  <!-- Check-in -->
+                  <div class="form-group">
+                    <label for="checkin">
+                      <i class="fas fa-calendar-check"></i> Check-in Date
+                    </label>
+                    <input
+                      type="date"
+                      id="checkin"
+                      name="checkin"
+                      required
+                      placeholder="Select check-in date"
+                    />
+                  </div>
+
+                  <!-- Check-out -->
+                  <div class="form-group">
+                    <label for="checkout">
+                      <i class="fas fa-calendar-times"></i> Check-out Date
+                    </label>
+                    <input
+                      type="date"
+                      id="checkout"
+                      name="checkout"
+                      required
+                      placeholder="Select check-out date"
+                    />
+                  </div>
+                </div>
+
+                <!-- Leyenda de fechas -->
+                <div class="date-legend">
+                  <span class="date-legend-dot booked">✗</span>
+                  <span>Unavailable dates &bull; Minimum stay: 10 nights</span>
+                </div>
+              </div>
+n              <!-- Monthly Rental Fields -->
+              <div id="monthly-fields" style="display: none;">
+                <div class="booking-form-grid">
+                  <!-- Start Date -->
+                  <div class="form-group">
+                    <label for="monthly-start">
+                      <i class="fas fa-calendar-check"></i> Start Date
+                    </label>
+                    <input
+                      type="date"
+                      id="monthly-start"
+                      name="monthly-start"
+                      required
+                      placeholder="Select start date"
+                    />
+                  </div>
+
+                  <!-- Duration -->
+                  <div class="form-group">
+                    <label for="monthly-duration">
+                      <i class="fas fa-clock"></i> Duration (months)
+                    </label>
+                    <select id="monthly-duration" name="monthly-duration" required>
+                      <option value="1">1 month</option>
+                      <option value="2">2 months</option>
+                      <option value="3" selected>3 months</option>
+                      <option value="4">4 months</option>
+                      <option value="5">5 months</option>
+                      <option value="6">6 months</option>
+                      <option value="9">9 months</option>
+                      <option value="12">12 months</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div class="date-legend">
+                  <i class="fas fa-info-circle"></i>
+                  <span>Monthly rental: sales tax only (8.25%), no occupancy tax</span>
+                </div>
               </div>
 
               <!-- Price Display -->

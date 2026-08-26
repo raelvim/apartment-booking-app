@@ -5,6 +5,7 @@ const API_URL = ["localhost", "127.0.0.1"].includes(window.location.hostname)
   ? `http://${window.location.hostname}:3001`
   : PROD_API_URL;
 const MIN_NIGHTS = 10;
+let MONTHLY_RATE = 1800; // default, se carga del servidor
 
 document.addEventListener("DOMContentLoaded", () => {
   const bookingForm = document.getElementById("booking-form");
@@ -18,6 +19,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Estado de fechas bloqueadas (rangos completos)
   let bookedDateRanges = [];
+  let currentRentalType = "short_stay"; // "short_stay" o "monthly"
 
   /**
    * Función que flatpickr usa para bloquear fechas.
@@ -45,6 +47,98 @@ document.addEventListener("DOMContentLoaded", () => {
     const m = String(date.getMonth() + 1).padStart(2, "0");
     const d = String(date.getDate()).padStart(2, "0");
     return `${y}-${m}-${d}`;
+  }
+
+  // ============ RENTAL TYPE TOGGLE ============
+
+  const rentalBtns = document.querySelectorAll(".rental-type-btn");
+  const shortStayFields = document.getElementById("short-stay-fields");
+  const monthlyFields = document.getElementById("monthly-fields");
+  const monthlyStartInput = document.getElementById("monthly-start");
+  const monthlyDurationSelect = document.getElementById("monthly-duration");
+
+  // Cargar tarifa mensual del servidor
+  fetch(`${API_URL}/api/monthly-rate`)
+    .then((r) => r.json())
+    .then((data) => {
+      if (data.monthly_rate) MONTHLY_RATE = data.monthly_rate;
+    })
+    .catch(() => {}); // usar default
+
+  rentalBtns.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      rentalBtns.forEach((b) => b.classList.remove("active"));
+      btn.classList.add("active");
+      currentRentalType = btn.dataset.type;
+
+      if (currentRentalType === "monthly") {
+        shortStayFields.style.display = "none";
+        monthlyFields.style.display = "block";
+        updateMonthlyPriceDisplay();
+      } else {
+        shortStayFields.style.display = "block";
+        monthlyFields.style.display = "none";
+        updatePriceDisplay();
+      }
+    });
+  });
+
+  if (monthlyStartInput) {
+    monthlyStartInput.addEventListener("change", updateMonthlyPriceDisplay);
+  }
+  if (monthlyDurationSelect) {
+    monthlyDurationSelect.addEventListener("change", updateMonthlyPriceDisplay);
+  }
+
+  async function updateMonthlyPriceDisplay() {
+    const startDate = monthlyStartInput.value;
+    const months = parseInt(monthlyDurationSelect.value) || 3;
+
+    if (!startDate) {
+      if (priceDisplay) priceDisplay.innerHTML = "";
+      return;
+    }
+
+    try {
+      const response = await fetch(`${API_URL}/api/calculate-price`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          rental_type: "monthly",
+          months,
+          monthly_rate: MONTHLY_RATE,
+        }),
+      });
+
+      if (response.ok) {
+        const pricing = await response.json();
+        const totalMonths = months;
+        if (priceDisplay) {
+          priceDisplay.innerHTML = `
+            <div class="price-breakdown">
+              <div class="price-row">
+                <span>Monthly rate × ${totalMonths} month(s):</span>
+                <span>$${pricing.subtotal.toFixed(2)}</span>
+              </div>
+              <div class="price-row tax-row">
+                <span>Mecklenburg Sales Tax (8.25%):</span>
+                <span>$${pricing.mecklenburg_sales_tax.toFixed(2)}</span>
+              </div>
+              <div class="price-row" style="color: #999; font-style: italic;">
+                <span>Occupancy Tax:</span>
+                <span>$0.00 (not applicable)</span>
+              </div>
+              <div class="price-row total-row">
+                <span><strong>Total:</strong></span>
+                <span><strong>$${pricing.total.toFixed(2)}</strong></span>
+              </div>
+            </div>
+          `;
+        }
+      }
+    } catch (error) {
+      console.error("Error calculating monthly price:", error);
+    }
   }
 
   // ============ FLATPICKR ============
@@ -220,84 +314,179 @@ document.addEventListener("DOMContentLoaded", () => {
     bookingMessage.textContent = "";
     bookingMessage.className = "booking-message";
 
-    const checkInDate = checkinPicker.selectedDates[0];
-    const checkOutDate = checkoutPicker.selectedDates[0];
-
-    if (!checkInDate || !checkOutDate) {
-      bookingMessage.textContent = "Please select both check-in and check-out dates.";
-      bookingMessage.className = "booking-message error";
-      return;
-    }
-
-    const checkIn = formatDateLocal(checkInDate);
-    const checkOut = formatDateLocal(checkOutDate);
-
-    if (new Date(checkOut) <= new Date(checkIn)) {
-      bookingMessage.textContent = "Check-out date must be after check-in date.";
-      bookingMessage.className = "booking-message error";
-      return;
-    }
-
-    const nights = Math.round((checkOutDate - checkInDate) / (1000 * 60 * 60 * 24));
-
-    if (nights < MIN_NIGHTS) {
-      bookingMessage.textContent = `Minimum stay is ${MIN_NIGHTS} nights. Please select a longer period.`;
-      bookingMessage.className = "booking-message error";
-      return;
-    }
-
-    // Recargar fechas antes de validar
-    await fetchBookedDates();
-
-    if (!isRangeAvailable(checkInDate, checkOutDate)) {
-      bookingMessage.textContent = "One or more dates in this range are no longer available. Please select different dates.";
-      bookingMessage.className = "booking-message error";
-      return;
-    }
-
     try {
-      bookingMessage.textContent = "Calculating price...";
-      bookingMessage.className = "booking-message";
+      if (currentRentalType === "monthly") {
+        // ── Arriendo Mensual ──
+        const startDate = monthlyStartInput.value;
+        const months = parseInt(monthlyDurationSelect.value) || 3;
 
-      const priceResponse = await fetch(`${API_URL}/api/calculate-price`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ nights, pricePerNight: PRICE_PER_NIGHT }),
-      });
+        if (!startDate) {
+          bookingMessage.textContent = "Please select a start date.";
+          bookingMessage.className = "booking-message error";
+          return;
+        }
 
-      if (!priceResponse.ok) throw new Error("Failed to calculate price");
-      const pricing = await priceResponse.json();
+        // Calcular fechas de check-in y check-out para el calendario
+        const start = new Date(startDate);
+        const end = new Date(start);
+        end.setMonth(end.getMonth() + months);
+        const checkIn = formatDateLocal(start);
+        const checkOut = formatDateLocal(end);
 
-      const confirmed = await showBookingConfirmation({ checkIn, checkOut, nights, pricing });
-      if (!confirmed) {
-        bookingMessage.textContent = "";
-        return;
-      }
+        bookingMessage.textContent = "Calculating price...";
+        bookingMessage.className = "booking-message";
 
-      bookingMessage.textContent = "Preparing secure payment... Please wait.";
-      bookingMessage.className = "booking-message";
+        const priceResponse = await fetch(`${API_URL}/api/calculate-price`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            rental_type: "monthly",
+            months,
+            monthly_rate: MONTHLY_RATE,
+          }),
+        });
 
-      const sessionResponse = await fetch(`${API_URL}/api/create-checkout-session`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ checkIn, checkOut, nights, pricePerNight: PRICE_PER_NIGHT }),
-      });
+        if (!priceResponse.ok) throw new Error("Failed to calculate price");
+        const pricing = await priceResponse.json();
 
-      if (!sessionResponse.ok) {
-        const errorData = await sessionResponse.json();
-        throw new Error(errorData.error || "Failed to create payment session");
-      }
+        // Mostrar confirmación adaptada para mensual
+        document.getElementById("confirm-checkin").textContent = checkIn;
+        document.getElementById("confirm-checkout").textContent = checkOut;
+        document.getElementById("confirm-nights").textContent = `${months} month(s)`;
+        document.getElementById("confirm-base").textContent = `$${pricing.subtotal.toFixed(2)}`;
+        document.getElementById("confirm-meck-sales").textContent = `$${pricing.mecklenburg_sales_tax.toFixed(2)}`;
+        document.getElementById("confirm-meck-occupancy").textContent = `$0.00 (N/A)`;
+        document.getElementById("confirm-total").textContent = `$${pricing.total.toFixed(2)}`;
+        confirmModal.classList.add("show");
 
-      const session = await sessionResponse.json();
+        const confirmed = await new Promise((resolve) => {
+          function cleanup(result) {
+            confirmModal.classList.remove("show");
+            confirmCancelBtn.removeEventListener("click", onCancel);
+            confirmAcceptBtn.removeEventListener("click", onAccept);
+            resolve(result);
+          }
+          function onCancel() { cleanup(false); }
+          function onAccept() { cleanup(true); }
+          confirmCancelBtn.addEventListener("click", onCancel);
+          confirmAcceptBtn.addEventListener("click", onAccept);
+        });
 
-      localStorage.setItem("pending_booking_checkIn", checkIn);
-      localStorage.setItem("pending_booking_checkOut", checkOut);
-      localStorage.setItem("pending_session_id", session.id);
+        if (!confirmed) {
+          bookingMessage.textContent = "";
+          return;
+        }
 
-      if (session.url) {
-        window.location.href = session.url;
+        bookingMessage.textContent = "Preparing secure payment... Please wait.";
+        bookingMessage.className = "booking-message";
+
+        const sessionResponse = await fetch(`${API_URL}/api/create-checkout-session`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            rental_type: "monthly",
+            checkIn,
+            checkOut,
+            months,
+            monthly_rate: MONTHLY_RATE,
+          }),
+        });
+
+        if (!sessionResponse.ok) {
+          const errorData = await sessionResponse.json();
+          throw new Error(errorData.error || "Failed to create payment session");
+        }
+
+        const session = await sessionResponse.json();
+        localStorage.setItem("pending_booking_checkIn", checkIn);
+        localStorage.setItem("pending_booking_checkOut", checkOut);
+        localStorage.setItem("pending_session_id", session.id);
+
+        if (session.url) {
+          window.location.href = session.url;
+        } else {
+          throw new Error("No checkout URL provided");
+        }
       } else {
-        throw new Error("No checkout URL provided");
+        // ── Estancia Corta ──
+        const checkInDate = checkinPicker.selectedDates[0];
+        const checkOutDate = checkoutPicker.selectedDates[0];
+
+        if (!checkInDate || !checkOutDate) {
+          bookingMessage.textContent = "Please select both check-in and check-out dates.";
+          bookingMessage.className = "booking-message error";
+          return;
+        }
+
+        const checkIn = formatDateLocal(checkInDate);
+        const checkOut = formatDateLocal(checkOutDate);
+
+        if (new Date(checkOut) <= new Date(checkIn)) {
+          bookingMessage.textContent = "Check-out date must be after check-in date.";
+          bookingMessage.className = "booking-message error";
+          return;
+        }
+
+        const nights = Math.round((checkOutDate - checkInDate) / (1000 * 60 * 60 * 24));
+
+        if (nights < MIN_NIGHTS) {
+          bookingMessage.textContent = `Minimum stay is ${MIN_NIGHTS} nights. Please select a longer period.`;
+          bookingMessage.className = "booking-message error";
+          return;
+        }
+
+        // Recargar fechas antes de validar
+        await fetchBookedDates();
+
+        if (!isRangeAvailable(checkInDate, checkOutDate)) {
+          bookingMessage.textContent = "One or more dates in this range are no longer available. Please select different dates.";
+          bookingMessage.className = "booking-message error";
+          return;
+        }
+
+        bookingMessage.textContent = "Calculating price...";
+        bookingMessage.className = "booking-message";
+
+        const priceResponse = await fetch(`${API_URL}/api/calculate-price`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ nights, pricePerNight: PRICE_PER_NIGHT }),
+        });
+
+        if (!priceResponse.ok) throw new Error("Failed to calculate price");
+        const pricing = await priceResponse.json();
+
+        const confirmed = await showBookingConfirmation({ checkIn, checkOut, nights, pricing });
+        if (!confirmed) {
+          bookingMessage.textContent = "";
+          return;
+        }
+
+        bookingMessage.textContent = "Preparing secure payment... Please wait.";
+        bookingMessage.className = "booking-message";
+
+        const sessionResponse = await fetch(`${API_URL}/api/create-checkout-session`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ checkIn, checkOut, nights, pricePerNight: PRICE_PER_NIGHT }),
+        });
+
+        if (!sessionResponse.ok) {
+          const errorData = await sessionResponse.json();
+          throw new Error(errorData.error || "Failed to create payment session");
+        }
+
+        const session = await sessionResponse.json();
+
+        localStorage.setItem("pending_booking_checkIn", checkIn);
+        localStorage.setItem("pending_booking_checkOut", checkOut);
+        localStorage.setItem("pending_session_id", session.id);
+
+        if (session.url) {
+          window.location.href = session.url;
+        } else {
+          throw new Error("No checkout URL provided");
+        }
       }
     } catch (error) {
       console.error("Payment error:", error);

@@ -250,6 +250,7 @@
               <th>ID</th>
               <th>Check-In</th>
               <th>Check-Out</th>
+              <th>Type</th>
               <th class="actions-cell">Actions</th>
             </tr>
           </thead>
@@ -422,6 +423,10 @@
           const checkOutDate = new Date(booking.checkOut);
           const isPastOrCancelled =
             booking.bookingStatus !== "confirmed" || checkOutDate < new Date();
+          const rentalType = booking.rental_type === "monthly" ? "Monthly" : "Short Stay";
+          const typeBadge = booking.rental_type === "monthly"
+            ? `<span style="background:#667eea;color:white;padding:2px 8px;border-radius:4px;font-size:11px;">Monthly</span>`
+            : `<span style="background:#95a5a6;color:white;padding:2px 8px;border-radius:4px;font-size:11px;">Short Stay</span>`;
 
           tr.innerHTML = `
                 <td>${booking.id}</td>
@@ -429,6 +434,7 @@
                 <td>${new Date(booking.checkOut).toLocaleDateString(
                   "en-US",
                 )}</td>
+                <td>${typeBadge}</td>
                 ${
                   isPastOrCancelled
                     ? `<td class="${statusClass}">${booking.bookingStatus}</td>`

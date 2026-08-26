@@ -469,6 +469,69 @@ nav a:hover::after {
   margin-bottom: 30px;
 }
 
+/* Rental Type Toggle */
+.rental-type-toggle {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 25px;
+  background: #f5f5f5;
+  padding: 5px;
+  border-radius: 10px;
+}
+
+.rental-type-btn {
+  flex: 1;
+  padding: 12px 16px;
+  border: 2px solid transparent;
+  border-radius: 8px;
+  background: white;
+  color: #666;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.3s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.rental-type-btn:hover {
+  background: #e8e8e8;
+}
+
+.rental-type-btn.active {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border-color: transparent;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+/* Monthly select styling */
+#monthly-duration {
+  padding: 12px 15px;
+  border: 2px solid #e0e0e0;
+  border-radius: 6px;
+  font-size: 16px;
+  background: white;
+  width: 100%;
+  cursor: pointer;
+}
+
+#monthly-duration:focus {
+  outline: none;
+  border-color: #667eea;
+}
+
+.date-legend {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 20px;
+  color: #888;
+  font-size: 13px;
+}
+
 .booking-card .form-group {
   display: flex;
   flex-direction: column;

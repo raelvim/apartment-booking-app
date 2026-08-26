@@ -127,7 +127,7 @@ function getTaxConfig() {
 }
 
 /**
- * Calcula el precio total con impuestos Mecklenburg.
+ * Calcula el precio total con impuestos Mecklenburg para estancia corta.
  * Total: 16.25% (Ventas 8.25% + Ocupación 8.00%) sobre alojamiento + limpieza.
  */
 function calculateTotalPrice(nights, pricePerNight, taxRates = null) {
@@ -146,6 +146,34 @@ function calculateTotalPrice(nights, pricePerNight, taxRates = null) {
     subtotal: Math.round(subtotal * 100) / 100,
     mecklenburg_sales_tax: Math.round(salesTax * 100) / 100,
     mecklenburg_occupancy_tax: Math.round(occupancyTax * 100) / 100,
+    total_tax: Math.round(totalTax * 100) / 100,
+    total: Math.round(total * 100) / 100,
+  };
+}
+
+/**
+ * Calcula el precio para arriendo mensual.
+ * Solo impuesto de ventas (8.25%), sin impuesto de ocupación.
+ * El arriendo mensual no aplica occupancy tax de Airbnb.
+ */
+function calculateMonthlyPrice(months, monthlyRate, taxRates = null) {
+  if (!taxRates) taxRates = getTaxConfig();
+
+  const subtotal = months * monthlyRate;
+
+  // Solo impuesto de ventas para arriendo mensual (sin occupancy tax)
+  const salesTax = (subtotal * taxRates.mecklenburg_sales) / 100;
+
+  const totalTax = salesTax;
+  const total = subtotal + totalTax;
+
+  return {
+    rental_type: "monthly",
+    months,
+    monthly_rate: monthlyRate,
+    subtotal: Math.round(subtotal * 100) / 100,
+    mecklenburg_sales_tax: Math.round(salesTax * 100) / 100,
+    mecklenburg_occupancy_tax: 0,
     total_tax: Math.round(totalTax * 100) / 100,
     total: Math.round(total * 100) / 100,
   };
@@ -236,8 +264,21 @@ app.get("/api/tax-rates", (req, res) => {
 
 // Endpoint para calcular precio total (con impuestos)
 app.post("/api/calculate-price", (req, res) => {
-  const { nights, pricePerNight } = req.body;
+  const { nights, pricePerNight, rental_type, months, monthly_rate } = req.body;
 
+  // Arriendo mensual
+  if (rental_type === "monthly") {
+    if (!months || !monthly_rate) {
+      return res.status(400).json({ error: "Missing months or monthly_rate" });
+    }
+    loadTaxSettingsFromDB((taxRates) => {
+      const pricing = calculateMonthlyPrice(months, monthly_rate, taxRates);
+      res.json(pricing);
+    });
+    return;
+  }
+
+  // Estancia corta (por noche)
   if (!nights || !pricePerNight) {
     return res.status(400).json({ error: "Missing nights or pricePerNight" });
   }
@@ -250,30 +291,47 @@ app.post("/api/calculate-price", (req, res) => {
 
 // Endpoint para crear sesión de pago Stripe
 app.post("/api/create-checkout-session", async (req, res) => {
-  const { nights, pricePerNight, checkIn, checkOut } = req.body;
-
-  if (!nights || !pricePerNight || !checkIn || !checkOut) {
-    return res.status(400).json({ error: "Missing payment information" });
-  }
+  const { nights, pricePerNight, checkIn, checkOut, rental_type, months, monthly_rate } = req.body;
 
   try {
-    // Validar disponibilidad en el servidor (nunca confiar solo en el cliente)
-    const isAvailable = await checkAvailability(checkIn, checkOut);
-    if (!isAvailable) {
-      return res
-        .status(409)
-        .json({ error: "Selected dates are no longer available" });
-    }
+    let pricing;
+    let metadata;
+    let productName;
+    let productDescription;
 
-    // Calcular precio total con impuestos
-    const pricing = calculateTotalPrice(nights, pricePerNight);
+    if (rental_type === "monthly") {
+      // Arriendo mensual
+      if (!months || !monthly_rate || !checkIn || !checkOut) {
+        return res.status(400).json({ error: "Missing monthly rental information" });
+      }
+      pricing = calculateMonthlyPrice(months, monthly_rate);
+      metadata = { rental_type: "monthly", months: String(months), checkIn, checkOut };
+      productName = "Lakeside Serenity - Monthly Rental";
+      productDescription = `${months} month(s): ${checkIn} to ${checkOut}`;
+    } else {
+      // Estancia corta
+      if (!nights || !pricePerNight || !checkIn || !checkOut) {
+        return res.status(400).json({ error: "Missing payment information" });
+      }
+      // Validar disponibilidad en el servidor (nunca confiar solo en el cliente)
+      const isAvailable = await checkAvailability(checkIn, checkOut);
+      if (!isAvailable) {
+        return res
+          .status(409)
+          .json({ error: "Selected dates are no longer available" });
+      }
+      pricing = calculateTotalPrice(nights, pricePerNight);
+      metadata = { checkIn, checkOut, nights: String(nights) };
+      productName = "Lakeside Serenity - Apartment Stay";
+      productDescription = `${nights} night(s): ${checkIn} to ${checkOut}`;
+    }
 
     // Modo simulado: no llama a Stripe, genera una "sesión" falsa para probar el flujo completo
     if (MOCK_PAYMENTS) {
       const mockId = `mock_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
       mockSessions.set(mockId, {
         payment_status: "paid",
-        metadata: { checkIn, checkOut, nights: String(nights) },
+        metadata,
       });
       return res.json({
         id: mockId,
@@ -290,8 +348,8 @@ app.post("/api/create-checkout-session", async (req, res) => {
           price_data: {
             currency: "usd",
             product_data: {
-              name: "Lakeside Serenity - Apartment Stay",
-              description: `${nights} night(s): ${checkIn} to ${checkOut}`,
+              name: productName,
+              description: productDescription,
             },
             unit_amount: Math.round(pricing.total * 100), // Total con impuestos en centavos
           },
@@ -301,11 +359,7 @@ app.post("/api/create-checkout-session", async (req, res) => {
       mode: "payment",
       success_url: `${process.env.DOMAIN}/success.html?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${process.env.DOMAIN}/cancel.html`,
-      metadata: {
-        checkIn,
-        checkOut,
-        nights,
-      },
+      metadata,
     });
 
     res.json({
@@ -344,8 +398,9 @@ app.post("/api/bookings", async (req, res) => {
     }
 
     // INSERT OR IGNORE: si el webhook ya guardó esta reserva (mismo stripePaymentId), no se duplica
-    const sql = `INSERT OR IGNORE INTO bookings (checkIn, checkOut, bookingStatus, stripePaymentId) VALUES (?, ?, ?, ?)`;
-    const params = [checkIn, checkOut, "confirmed", session.id];
+    const rentalType = session.metadata?.rental_type || "short_stay";
+    const sql = `INSERT OR IGNORE INTO bookings (checkIn, checkOut, bookingStatus, stripePaymentId, rental_type) VALUES (?, ?, ?, ?, ?)`;
+    const params = [checkIn, checkOut, "confirmed", session.id, rentalType];
 
     db.run(sql, params, function (err) {
       if (err) {
@@ -417,8 +472,9 @@ function handleStripeWebhook(req, res) {
 
     // Reserva de alojamiento
     if (checkIn && checkOut && session.payment_status === "paid") {
-      const sql = `INSERT OR IGNORE INTO bookings (checkIn, checkOut, bookingStatus, stripePaymentId) VALUES (?, ?, 'confirmed', ?)`;
-      db.run(sql, [checkIn, checkOut, session.id], function (err) {
+      const rentalType = session.metadata?.rental_type || "short_stay";
+      const sql = `INSERT OR IGNORE INTO bookings (checkIn, checkOut, bookingStatus, stripePaymentId, rental_type) VALUES (?, ?, 'confirmed', ?, ?)`;
+      db.run(sql, [checkIn, checkOut, session.id, rentalType], function (err) {
         if (err) {
           console.error(
             "Error guardando reserva desde el webhook:",
@@ -501,12 +557,59 @@ app.delete("/api/admin/bookings/:id", checkAdminAuth, (req, res) => {
   });
 });
 
+// ============ MONTHLY RATE ENDPOINTS ============
+
+// Obtener tarifa mensual
+app.get("/api/monthly-rate", (req, res) => {
+  loadTaxSettingsFromDB((rates) => {
+    // El monthly_rate viene de la DB; si no existe, usar default
+    db.get(`SELECT monthly_rate FROM tax_settings ORDER BY updated_at DESC LIMIT 1`, [], (err, row) => {
+      const monthlyRate = (row && row.monthly_rate != null) ? row.monthly_rate : 1800;
+      res.json({ monthly_rate: monthlyRate });
+    });
+  });
+});
+
+// Obtener configuración de tarifa mensual (admin)
+app.get("/api/admin/monthly-rate", checkAdminAuth, (req, res) => {
+  db.get(`SELECT monthly_rate FROM tax_settings ORDER BY updated_at DESC LIMIT 1`, [], (err, row) => {
+    if (err) {
+      return res.status(500).json({ error: err.message });
+    }
+    res.json({ monthly_rate: (row && row.monthly_rate != null) ? row.monthly_rate : 1800 });
+  });
+});
+
+// Actualizar tarifa mensual (admin)
+app.post("/api/admin/monthly-rate", checkAdminAuth, (req, res) => {
+  const { monthly_rate } = req.body;
+  if (monthly_rate === undefined || monthly_rate <= 0) {
+    return res.status(400).json({ error: "Invalid monthly rate" });
+  }
+  // Actualizar el registro más reciente de tax_settings
+  db.run(`UPDATE tax_settings SET monthly_rate = ? WHERE id = (SELECT id FROM tax_settings ORDER BY updated_at DESC LIMIT 1)`, [monthly_rate], function (err) {
+    if (err) {
+      // Si no existe registro, crear uno con defaults
+      db.run(`INSERT INTO tax_settings (nc_state, mecklenburg_local, occupancy, mecklenburg_sales, mecklenburg_occupancy, monthly_rate, updated_at) VALUES (0, 0, 0, 8.25, 8.0, ?, datetime('now'))`, [monthly_rate], function (err2) {
+        if (err2) {
+          return res.status(500).json({ error: err2.message });
+        }
+        broadcastAdminUpdate();
+        res.json({ message: "Monthly rate updated", monthly_rate });
+      });
+    } else {
+      broadcastAdminUpdate();
+      res.json({ message: "Monthly rate updated", monthly_rate });
+    }
+  });
+});
+
 // ============ TAX SETTINGS ENDPOINTS ============
 
 // Obtener configuración de impuestos Mecklenburg
 app.get("/api/admin/tax-settings", checkAdminAuth, (req, res) => {
   const sql = `
-    SELECT id, mecklenburg_sales, mecklenburg_occupancy,
+    SELECT id, mecklenburg_sales, mecklenburg_occupancy, monthly_rate,
            nc_state, mecklenburg_local, occupancy, updated_at
     FROM tax_settings
     ORDER BY updated_at DESC
@@ -523,29 +626,32 @@ app.get("/api/admin/tax-settings", checkAdminAuth, (req, res) => {
         id: row.id,
         mecklenburg_sales: row.mecklenburg_sales != null ? row.mecklenburg_sales : 8.25,
         mecklenburg_occupancy: row.mecklenburg_occupancy != null ? row.mecklenburg_occupancy : 8.0,
+        monthly_rate: row.monthly_rate != null ? row.monthly_rate : 1800,
         updated_at: row.updated_at,
       });
     } else {
-      res.json(getTaxConfig());
+      res.json({ ...getTaxConfig(), monthly_rate: 1800 });
     }
   });
 });
 
 // Actualizar configuración de impuestos Mecklenburg
 app.post("/api/admin/tax-settings", checkAdminAuth, (req, res) => {
-  const { mecklenburg_sales, mecklenburg_occupancy } = req.body;
+  const { mecklenburg_sales, mecklenburg_occupancy, monthly_rate } = req.body;
 
   if (mecklenburg_sales === undefined || mecklenburg_occupancy === undefined) {
     return res.status(400).json({ error: "Missing tax rates" });
   }
 
+  const effectiveMonthlyRate = monthly_rate != null ? monthly_rate : 1800;
+
   // Mantener columnas antiguas con valores por defecto para compatibilidad
   const sql = `
-    INSERT INTO tax_settings (nc_state, mecklenburg_local, occupancy, mecklenburg_sales, mecklenburg_occupancy, updated_at)
-    VALUES (0, 0, 0, ?, ?, datetime('now'))
+    INSERT INTO tax_settings (nc_state, mecklenburg_local, occupancy, mecklenburg_sales, mecklenburg_occupancy, monthly_rate, updated_at)
+    VALUES (0, 0, 0, ?, ?, ?, datetime('now'))
   `;
 
-  db.run(sql, [mecklenburg_sales, mecklenburg_occupancy], function (err) {
+  db.run(sql, [mecklenburg_sales, mecklenburg_occupancy, effectiveMonthlyRate], function (err) {
     if (err) {
       return res.status(500).json({ error: err.message });
     }
@@ -555,6 +661,7 @@ app.post("/api/admin/tax-settings", checkAdminAuth, (req, res) => {
       id: this.lastID,
       mecklenburg_sales,
       mecklenburg_occupancy,
+      monthly_rate: effectiveMonthlyRate,
     });
   });
 });

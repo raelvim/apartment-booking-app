@@ -84,6 +84,18 @@ const db = new sqlite3.Database(dbPath, (err) => {
       () => {}, // ignora error si la columna ya existe
     );
 
+    // Migración: agregar columna de tipo de reserva (short_stay / monthly)
+    db.run(
+      `ALTER TABLE bookings ADD COLUMN rental_type TEXT DEFAULT 'short_stay'`,
+      () => {}, // ignora error si la columna ya existe
+    );
+
+    // Migración: agregar columna de tarifa mensual en tax_settings
+    db.run(
+      `ALTER TABLE tax_settings ADD COLUMN monthly_rate REAL DEFAULT 1800`,
+      () => {}, // ignora error si la columna ya existe
+    );
+
     // Cobros manuales (facturas enviadas a clientes)
     db.run(
       `CREATE TABLE IF NOT EXISTS manual_charges (
