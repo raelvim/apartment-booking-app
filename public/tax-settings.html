@@ -28,7 +28,7 @@
       }
 
       .container {
-        max-width: 720px;
+        max-width: 760px;
         width: 100%;
       }
 
@@ -102,6 +102,7 @@
       .percent-sign {
         font-weight: 600;
         color: #667eea;
+        white-space: nowrap;
       }
 
       .airbnb-note {
@@ -120,41 +121,117 @@
       .airbnb-note i {
         margin-top: 2px;
         font-size: 16px;
+        flex-shrink: 0;
       }
 
-      .tax-summary {
-        background: #f5f5f5;
-        padding: 20px;
-        border-radius: 8px;
-        margin-bottom: 25px;
+      /* ========== PREVIEW SECTIONS ========== */
+
+      .preview-section {
+        background: #f8f9fa;
+        border: 1px solid #e9ecef;
+        border-radius: 10px;
+        padding: 24px;
+        margin-bottom: 20px;
       }
 
-      .tax-summary h3 {
-        margin-bottom: 15px;
+      .preview-section:last-of-type {
+        margin-bottom: 0;
+      }
+
+      .preview-title {
+        font-size: 15px;
+        font-weight: 700;
         color: #333;
-        font-size: 16px;
+        margin-bottom: 16px;
+        padding-bottom: 10px;
+        border-bottom: 2px solid #e9ecef;
+        display: flex;
+        align-items: center;
+        gap: 8px;
       }
 
-      .tax-item {
+      .preview-title .icon {
+        font-size: 18px;
+      }
+
+      /* Row layout: label on left, value on right */
+      .preview-row {
         display: flex;
         justify-content: space-between;
+        align-items: center;
         padding: 8px 0;
-        border-bottom: 1px solid #ddd;
         font-size: 14px;
+        gap: 12px;
       }
 
-      .tax-item:last-child {
-        border-bottom: none;
+      .preview-row .label {
+        color: #555;
+        flex-shrink: 0;
       }
 
-      .tax-item .label {
-        color: #666;
+      .preview-row .value {
+        font-weight: 600;
+        color: #333;
+        text-align: right;
+        white-space: nowrap;
       }
 
-      .tax-item .value {
+      .preview-divider {
+        border: none;
+        border-top: 1px solid #ddd;
+        margin: 4px 0;
+      }
+
+      .preview-total {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px 0 2px;
+        font-size: 16px;
+        font-weight: 700;
+      }
+
+      .preview-total .label {
+        color: #333;
+      }
+
+      .preview-total .value {
+        color: #2980b9;
+        font-size: 17px;
+      }
+
+      .preview-subtotal-row {
+        background: #eef4fb;
+        margin: 0 -24px;
+        padding: 8px 24px;
+        border-radius: 6px;
+        margin-bottom: 8px;
+      }
+
+      .preview-subtotal-row .label {
+        color: #555;
+      }
+
+      .preview-subtotal-row .value {
         font-weight: 600;
         color: #333;
       }
+
+      .preview-muted {
+        color: #999 !important;
+        font-style: italic;
+      }
+
+      .preview-muted .label {
+        color: #999;
+      }
+
+      .preview-muted .value {
+        color: #999;
+        font-weight: 400;
+      }
+
+      /* ========== BUTTONS ========== */
 
       .button-group {
         display: flex;
@@ -192,6 +269,8 @@
       .btn-secondary:hover {
         background: #e0e0e0;
       }
+
+      /* ========== MESSAGES ========== */
 
       .message {
         padding: 15px;
@@ -232,12 +311,8 @@
       }
 
       @keyframes spin {
-        0% {
-          transform: rotate(0deg);
-        }
-        100% {
-          transform: rotate(360deg);
-        }
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
       }
 
       .back-link {
@@ -254,37 +329,66 @@
         text-decoration: underline;
       }
 
+      /* ========== RESPONSIVE ========== */
+
       @media (max-width: 600px) {
         body {
-          padding: 20px 15px;
+          padding: 20px 12px;
         }
+
         .card-header {
           padding: 20px;
         }
+
         .card-header h1 {
           font-size: 22px;
         }
+
         .card-body {
-          padding: 20px 15px;
+          padding: 20px 16px;
         }
+
         .button-group {
           flex-direction: column;
         }
-        .tax-summary {
-          padding: 15px 10px;
+
+        .preview-section {
+          padding: 16px;
+          margin-left: -16px;
+          margin-right: -16px;
+          border-radius: 0;
+          border-left: none;
+          border-right: none;
         }
-        .tax-item {
+
+        .preview-subtotal-row {
+          margin: 0 -16px;
+          padding: 8px 16px;
+        }
+
+        .preview-row {
           font-size: 13px;
-          flex-direction: column;
-          gap: 2px;
+          gap: 8px;
         }
-        .tax-item .value {
-          font-size: 14px;
+
+        .preview-row .label {
+          flex: 1;
+          min-width: 0;
         }
+
+        .preview-total {
+          font-size: 15px;
+        }
+
+        .preview-total .value {
+          font-size: 16px;
+        }
+
         .form-group input {
           font-size: 14px;
           padding: 10px 12px;
         }
+
         .input-group {
           flex-wrap: wrap;
         }
@@ -376,69 +480,75 @@
               </div>
             </div>
 
-            <!-- Tax Summary -->
-            <div class="tax-summary">
-              <h3>&#x1f4ca; Short Stay Preview (2 nights @ $150/night)</h3>
-              <div class="tax-item">
-                <span class="label">Subtotal:</span>
-                <span class="value">$300.00</span>
-              </div>
-              <div class="tax-item">
-                <span class="label">Mecklenburg Sales Tax:</span>
-                <span class="value" id="previewSalesTax">$24.75</span>
-              </div>
-              <div class="tax-item">
-                <span class="label">Mecklenburg Occupancy Tax:</span>
-                <span class="value" id="previewOccupancyTax">$24.00</span>
-              </div>
-              <div
-                class="tax-item"
-                style="
-                  border-bottom: 2px solid #667eea;
-                  padding-top: 12px;
-                  padding-bottom: 12px;
-                "
-              >
-                <span class="label" style="font-weight: 700; color: #667eea"
-                  >Total Tax (16.25%):</span
-                >
-                <span
-                  class="value"
-                  style="color: #667eea; font-size: 16px"
-                  id="previewTotalTax"
-                  >$48.75</span
-                >
-              </div>
-              <div class="tax-item" style="padding-top: 12px">
-                <span
-                  class="label"
-                  style="font-weight: 700; font-size: 16px; color: #333"
-                  >Final Total:</span
-                >
-                <span
-                  class="value"
-                  style="font-size: 16px; color: #667eea"
-                  id="previewFinalTotal"
-                  >$348.75</span
+            <!-- ========== SHORT STAY PREVIEW ========== -->
+            <div class="preview-section">
+              <div class="preview-title">
+                <span class="icon">&#x1f3e8;</span>
+                Short Stay Preview
+                <span style="font-weight: 400; font-size: 13px; color: #888;">(2 nights @ $150)</span>
               </div>
 
-              <!-- Monthly Preview -->
-              <h3 style="margin-top: 20px;">&#x1f4ca; Monthly Rental Preview (3 months @ $1,800/month)</h3>
-              <div class="tax-item">
-                <span class="label">Subtotal:</span>
+              <div class="preview-subtotal-row preview-row">
+                <span class="label">Subtotal</span>
+                <span class="value">$300.00</span>
+              </div>
+
+              <div class="preview-row">
+                <span class="label">Sales Tax <span style="color:#999;">(<span id="previewSalesRate">8.25</span>%)</span></span>
+                <span class="value" id="previewSalesTax">$24.75</span>
+              </div>
+
+              <div class="preview-row">
+                <span class="label">Occupancy Tax <span style="color:#999;">(<span id="previewOccRate">8.00</span>%)</span></span>
+                <span class="value" id="previewOccupancyTax">$24.00</span>
+              </div>
+
+              <hr class="preview-divider" />
+
+              <div class="preview-total">
+                <span class="label">Total Tax</span>
+                <span class="value" id="previewTotalTax">$48.75</span>
+              </div>
+
+              <div class="preview-total" style="padding-top: 6px;">
+                <span class="label">Final Total</span>
+                <span class="value" id="previewFinalTotal" style="font-size: 20px;">$348.75</span>
+              </div>
+            </div>
+
+            <!-- ========== MONTHLY RENTAL PREVIEW ========== -->
+            <div class="preview-section">
+              <div class="preview-title">
+                <span class="icon">&#x1f4c5;</span>
+                Monthly Rental Preview
+                <span style="font-weight: 400; font-size: 13px; color: #888;">(3 months)</span>
+              </div>
+
+              <div class="preview-subtotal-row preview-row">
+                <span class="label">Subtotal <span style="color:#999;">(3 × $<span id="previewMonthlyRate">1,800</span>)</span></span>
                 <span class="value" id="previewMonthlySubtotal">$5,400.00</span>
               </div>
-              <div class="tax-item">
-                <span class="label">Mecklenburg Sales Tax (8.25%):</span>
+
+              <div class="preview-row">
+                <span class="label">Sales Tax <span style="color:#999;">(<span id="previewMonthlySalesRate">8.25</span>%)</span></span>
                 <span class="value" id="previewMonthlySalesTax">$445.50</span>
               </div>
-              <div class="tax-item" style="color: #999; font-style: italic;">
-                <span class="label">Occupancy Tax:</span>
-                <span class="value">$0.00 (N/A)</span>
+
+              <div class="preview-row preview-muted">
+                <span class="label">Occupancy Tax</span>
+                <span class="value">N/A</span>
               </div>
-              <div class="tax-item" style="padding-top: 12px;">
-                <span class="label" style="font-weight: 700; font-size: 16px; color: #333;">Monthly Total:</span>
-                <span class="value" style="font-size: 16px; color: #667eea;" id="previewMonthlyTotal">$5,845.50</span>
+
+              <hr class="preview-divider" />
+
+              <div class="preview-total">
+                <span class="label">Total Tax</span>
+                <span class="value" id="previewMonthlyTaxTotal">$445.50</span>
+              </div>
+
+              <div class="preview-total" style="padding-top: 6px;">
+                <span class="label">Final Total</span>
+                <span class="value" id="previewMonthlyTotal" style="font-size: 20px;">$5,845.50</span>
               </div>
             </div>
 
@@ -471,12 +581,25 @@
       const monthlyRateInput = document.getElementById("monthlyRate");
       const resetBtn = document.getElementById("resetBtn");
 
-      // Valores por defecto: Ventas 8.25% + Ocupación 8.00% = 16.25%
       const DEFAULT_RATES = {
         mecklenburg_sales: 8.25,
         mecklenburg_occupancy: 8.0,
         monthly_rate: 1800,
       };
+
+      function formatCurrency(amount) {
+        return "$" + amount.toLocaleString("en-US", {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        });
+      }
+
+      function formatNumber(num) {
+        return num.toLocaleString("en-US", {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        });
+      }
 
       function showMessage(text, type = "success") {
         message.textContent = text;
@@ -487,32 +610,37 @@
       }
 
       function updateTaxPreview() {
-        const subtotal = 300; // 2 noches x $150
         const salesRate = parseFloat(salesInput.value) || 0;
         const occRate = parseFloat(occupancyInput.value) || 0;
+        const monthlyRate = parseFloat(monthlyRateInput.value) || 1800;
 
+        // Update rate labels
+        document.getElementById("previewSalesRate").textContent = formatNumber(salesRate);
+        document.getElementById("previewOccRate").textContent = formatNumber(occRate);
+        document.getElementById("previewMonthlySalesRate").textContent = formatNumber(salesRate);
+        document.getElementById("previewMonthlyRate").textContent = formatNumber(monthlyRate);
+
+        // Short stay: 2 nights x $150
+        const subtotal = 300;
         const salesTax = (subtotal * salesRate) / 100;
         const occTax = (subtotal * occRate) / 100;
         const totalTax = salesTax + occTax;
         const finalTotal = subtotal + totalTax;
 
-        document.getElementById("previewSalesTax").textContent =
-          `$${salesTax.toFixed(2)}`;
-        document.getElementById("previewOccupancyTax").textContent =
-          `$${occTax.toFixed(2)}`;
-        document.getElementById("previewTotalTax").textContent =
-          `$${totalTax.toFixed(2)}`;
-        document.getElementById("previewFinalTotal").textContent =
-          `$${finalTotal.toFixed(2)}`;
+        document.getElementById("previewSalesTax").textContent = formatCurrency(salesTax);
+        document.getElementById("previewOccupancyTax").textContent = formatCurrency(occTax);
+        document.getElementById("previewTotalTax").textContent = formatCurrency(totalTax);
+        document.getElementById("previewFinalTotal").textContent = formatCurrency(finalTotal);
 
-        // Preview mensual: 3 meses
-        const monthlyRate = parseFloat(monthlyRateInput.value) || 1800;
+        // Monthly: 3 months
         const monthlySubtotal = monthlyRate * 3;
         const monthlySalesTax = (monthlySubtotal * salesRate) / 100;
         const monthlyTotal = monthlySubtotal + monthlySalesTax;
-        document.getElementById("previewMonthlySubtotal").textContent = `$${monthlySubtotal.toFixed(2)}`;
-        document.getElementById("previewMonthlySalesTax").textContent = `$${monthlySalesTax.toFixed(2)}`;
-        document.getElementById("previewMonthlyTotal").textContent = `$${monthlyTotal.toFixed(2)}`;
+
+        document.getElementById("previewMonthlySubtotal").textContent = formatCurrency(monthlySubtotal);
+        document.getElementById("previewMonthlySalesTax").textContent = formatCurrency(monthlySalesTax);
+        document.getElementById("previewMonthlyTaxTotal").textContent = formatCurrency(monthlySalesTax);
+        document.getElementById("previewMonthlyTotal").textContent = formatCurrency(monthlyTotal);
       }
 
       async function loadSettings() {
@@ -526,9 +654,7 @@
           }
 
           const response = await fetch(`${API_URL}/api/admin/tax-settings`, {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
+            headers: { Authorization: `Bearer ${token}` },
           });
 
           if (response.status === 403 || response.status === 401) {
@@ -537,9 +663,7 @@
             return;
           }
 
-          if (!response.ok) {
-            throw new Error("Failed to load tax settings");
-          }
+          if (!response.ok) throw new Error("Failed to load tax settings");
 
           const data = await response.json();
           salesInput.value =

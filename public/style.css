@@ -88,16 +88,14 @@ section > .container > p {
   border: 2px solid transparent;
 }
 .btn-primary {
-  background: linear-gradient(135deg, #2980b9 0%, #3498db 100%);
+  background-color: transparent;
   color: #fff;
-  border-color: transparent;
+  border-color: #fff;
 }
 .btn-primary:hover {
-  background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%);
-  color: #fff;
-  border-color: transparent;
-  transform: translateY(-5px);
-  box-shadow: 0 10px 20px rgba(39, 174, 96, 0.3);
+  background-color: #fff;
+  color: var(--color-primary);
+  border-color: var(--color-primary);
 }
 .btn-secondary {
   background-color: rgba(255, 255, 255, 0.9);
