@@ -5,6 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Admin - Booking Management</title>
     <link rel="stylesheet" href="style.css" />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
+    />
     <style>
       body {
         background-color: #f4f7f6;
@@ -93,7 +97,7 @@
       }
 
       .btn-tax-settings {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: linear-gradient(135deg, #2980b9 0%, #3498db 100%);
         color: white;
         border: none;
         padding: 12px 20px;
@@ -109,8 +113,9 @@
       }
 
       .btn-tax-settings:hover {
+        background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%);
         transform: translateY(-2px);
-        box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+        box-shadow: 0 5px 15px rgba(39, 174, 96, 0.3);
       }
 
       /* Manual Billing Section */
@@ -225,10 +230,26 @@
       }
 
       @media (max-width: 768px) {
+        .admin-container {
+          padding: 20px;
+          margin: 20px auto;
+        }
         .admin-header {
           flex-direction: column;
           gap: 15px;
           align-items: flex-start;
+        }
+        .admin-title {
+          font-size: 20px;
+          text-align: left;
+        }
+        .bookings-table {
+          display: block;
+          overflow-x: auto;
+          white-space: nowrap;
+        }
+        .billing-form .form-row {
+          flex-direction: column;
         }
       }
     </style>
