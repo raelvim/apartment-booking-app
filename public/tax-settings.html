@@ -104,6 +104,24 @@
         color: #667eea;
       }
 
+      .airbnb-note {
+        background: #e8f5e9;
+        border: 1px solid #c8e6c9;
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 25px;
+        font-size: 13px;
+        color: #2e7d32;
+        display: flex;
+        align-items: flex-start;
+        gap: 10px;
+      }
+
+      .airbnb-note i {
+        margin-top: 2px;
+        font-size: 16px;
+      }
+
       .tax-summary {
         background: #f5f5f5;
         padding: 20px;
@@ -255,12 +273,12 @@
   </head>
   <body>
     <div class="container">
-      <a href="admin.html" class="back-link">← Back to Admin</a>
+      <a href="admin.html" class="back-link">&larr; Back to Admin</a>
 
       <div class="card">
         <div class="card-header">
-          <h1>💰 Tax Settings</h1>
-          <p>Configure tax rates for North Carolina</p>
+          <h1>&#x1f4b0; Tax Settings</h1>
+          <p>Configure Mecklenburg County tax rates</p>
         </div>
 
         <div class="card-body">
@@ -270,57 +288,44 @@
             <p>Loading...</p>
           </div>
 
+          <div class="airbnb-note">
+            <i class="fas fa-info-circle"></i>
+            <span>
+              <strong>Airbnb bookings:</strong> Airbnb automatically collects and remits these taxes. These rates apply to direct bookings made through this website.
+            </span>
+          </div>
+
           <form id="taxForm">
-            <!-- NC State Tax -->
+            <!-- Mecklenburg Sales Tax -->
             <div class="form-group">
-              <label>NC State Sales Tax</label>
+              <label>Mecklenburg County Sales Tax</label>
               <div class="description">
-                Applied to the total rental amount. Current rate: 4.75%
+                Applied to lodging + cleaning. Current rate: 8.25%
               </div>
               <div class="input-group">
                 <input
                   type="number"
-                  id="ncState"
+                  id="mecklenburgSales"
                   step="0.01"
                   min="0"
                   max="100"
-                  placeholder="4.75"
+                  placeholder="8.25"
                   required
                 />
                 <span class="percent-sign">%</span>
               </div>
             </div>
 
-            <!-- Mecklenburg Local Tax -->
+            <!-- Mecklenburg Occupancy Tax -->
             <div class="form-group">
-              <label>Mecklenburg County Local Tax</label>
+              <label>Mecklenburg County Occupancy Tax</label>
               <div class="description">
-                Applied to the total rental amount. Current rate: 2.25%
+                Applied to lodging + cleaning. Current rate: 8.00%
               </div>
               <div class="input-group">
                 <input
                   type="number"
-                  id="mecklenburgLocal"
-                  step="0.01"
-                  min="0"
-                  max="100"
-                  placeholder="2.25"
-                  required
-                />
-                <span class="percent-sign">%</span>
-              </div>
-            </div>
-
-            <!-- Occupancy Tax -->
-            <div class="form-group">
-              <label>Occupancy Tax (Tourism/Lodging)</label>
-              <div class="description">
-                Applied to the total rental amount. Current rate: 8.00%
-              </div>
-              <div class="input-group">
-                <input
-                  type="number"
-                  id="occupancy"
+                  id="mecklenburgOccupancy"
                   step="0.01"
                   min="0"
                   max="100"
@@ -333,21 +338,17 @@
 
             <!-- Tax Summary -->
             <div class="tax-summary">
-              <h3>📊 Tax Preview (Example: 2 nights @ $150/night)</h3>
+              <h3>&#x1f4ca; Tax Preview (Example: 2 nights @ $150/night)</h3>
               <div class="tax-item">
                 <span class="label">Subtotal:</span>
                 <span class="value">$300.00</span>
               </div>
               <div class="tax-item">
-                <span class="label">NC State Tax:</span>
-                <span class="value" id="previewNcTax">$14.25</span>
+                <span class="label">Mecklenburg Sales Tax:</span>
+                <span class="value" id="previewSalesTax">$24.75</span>
               </div>
               <div class="tax-item">
-                <span class="label">Mecklenburg Tax:</span>
-                <span class="value" id="previewMeckTax">$6.75</span>
-              </div>
-              <div class="tax-item">
-                <span class="label">Occupancy Tax:</span>
+                <span class="label">Mecklenburg Occupancy Tax:</span>
                 <span class="value" id="previewOccupancyTax">$24.00</span>
               </div>
               <div
@@ -359,13 +360,13 @@
                 "
               >
                 <span class="label" style="font-weight: 700; color: #667eea"
-                  >Total Tax:</span
+                  >Total Tax (16.25%):</span
                 >
                 <span
                   class="value"
                   style="color: #667eea; font-size: 16px"
                   id="previewTotalTax"
-                  >$45.00</span
+                  >$48.75</span
                 >
               </div>
               <div class="tax-item" style="padding-top: 12px">
@@ -378,7 +379,7 @@
                   class="value"
                   style="font-size: 16px; color: #667eea"
                   id="previewFinalTotal"
-                  >$345.00</span
+                  >$348.75</span
                 >
               </div>
             </div>
@@ -398,8 +399,6 @@
     </div>
 
     <script>
-      // El frontend (Netlify) y el backend viven en dominios distintos.
-      // TODO: reemplazar por la URL real una vez desplegado el backend (Render/Railway/etc).
       const PROD_API_URL = "https://escapelakenorman-api.onrender.com";
       const API_URL = ["localhost", "127.0.0.1"].includes(
         window.location.hostname,
@@ -409,19 +408,16 @@
       const form = document.getElementById("taxForm");
       const message = document.getElementById("message");
       const loading = document.getElementById("loading");
-      const ncStateInput = document.getElementById("ncState");
-      const mecklenburgInput = document.getElementById("mecklenburgLocal");
-      const occupancyInput = document.getElementById("occupancy");
+      const salesInput = document.getElementById("mecklenburgSales");
+      const occupancyInput = document.getElementById("mecklenburgOccupancy");
       const resetBtn = document.getElementById("resetBtn");
 
-      // Valores por defecto
+      // Valores por defecto: Ventas 8.25% + Ocupación 8.00% = 16.25%
       const DEFAULT_RATES = {
-        nc_state: 4.75,
-        mecklenburg_local: 2.25,
-        occupancy: 8.0,
+        mecklenburg_sales: 8.25,
+        mecklenburg_occupancy: 8.0,
       };
 
-      // Mostrar/ocultar mensajes
       function showMessage(text, type = "success") {
         message.textContent = text;
         message.className = `message ${type}`;
@@ -430,23 +426,18 @@
         }, 5000);
       }
 
-      // Calcular preview de impuestos
       function updateTaxPreview() {
         const subtotal = 300; // 2 noches x $150
-        const ncRate = parseFloat(ncStateInput.value) || 0;
-        const meckRate = parseFloat(mecklenburgInput.value) || 0;
+        const salesRate = parseFloat(salesInput.value) || 0;
         const occRate = parseFloat(occupancyInput.value) || 0;
 
-        const ncTax = (subtotal * ncRate) / 100;
-        const meckTax = (subtotal * meckRate) / 100;
+        const salesTax = (subtotal * salesRate) / 100;
         const occTax = (subtotal * occRate) / 100;
-        const totalTax = ncTax + meckTax + occTax;
+        const totalTax = salesTax + occTax;
         const finalTotal = subtotal + totalTax;
 
-        document.getElementById("previewNcTax").textContent =
-          `$${ncTax.toFixed(2)}`;
-        document.getElementById("previewMeckTax").textContent =
-          `$${meckTax.toFixed(2)}`;
+        document.getElementById("previewSalesTax").textContent =
+          `$${salesTax.toFixed(2)}`;
         document.getElementById("previewOccupancyTax").textContent =
           `$${occTax.toFixed(2)}`;
         document.getElementById("previewTotalTax").textContent =
@@ -455,12 +446,10 @@
           `$${finalTotal.toFixed(2)}`;
       }
 
-      // Cargar configuración actual
       async function loadSettings() {
         try {
           loading.style.display = "block";
 
-          // Obtener token del localStorage
           const token = localStorage.getItem("admin_token");
           if (!token) {
             window.location.href = "admin.html";
@@ -484,10 +473,14 @@
           }
 
           const data = await response.json();
-          ncStateInput.value = data.nc_state || DEFAULT_RATES.nc_state;
-          mecklenburgInput.value =
-            data.mecklenburg_local || DEFAULT_RATES.mecklenburg_local;
-          occupancyInput.value = data.occupancy || DEFAULT_RATES.occupancy;
+          salesInput.value =
+            data.mecklenburg_sales != null
+              ? data.mecklenburg_sales
+              : DEFAULT_RATES.mecklenburg_sales;
+          occupancyInput.value =
+            data.mecklenburg_occupancy != null
+              ? data.mecklenburg_occupancy
+              : DEFAULT_RATES.mecklenburg_occupancy;
 
           updateTaxPreview();
           loading.style.display = "none";
@@ -499,15 +492,12 @@
         }
       }
 
-      // Establecer valores por defecto
       function setDefaultValues() {
-        ncStateInput.value = DEFAULT_RATES.nc_state;
-        mecklenburgInput.value = DEFAULT_RATES.mecklenburg_local;
-        occupancyInput.value = DEFAULT_RATES.occupancy;
+        salesInput.value = DEFAULT_RATES.mecklenburg_sales;
+        occupancyInput.value = DEFAULT_RATES.mecklenburg_occupancy;
         updateTaxPreview();
       }
 
-      // Guardar configuración
       form.addEventListener("submit", async (e) => {
         e.preventDefault();
 
@@ -525,9 +515,8 @@
               Authorization: `Bearer ${token}`,
             },
             body: JSON.stringify({
-              nc_state: parseFloat(ncStateInput.value),
-              mecklenburg_local: parseFloat(mecklenburgInput.value),
-              occupancy: parseFloat(occupancyInput.value),
+              mecklenburg_sales: parseFloat(salesInput.value),
+              mecklenburg_occupancy: parseFloat(occupancyInput.value),
             }),
           });
 
@@ -550,7 +539,6 @@
         }
       });
 
-      // Botón reset
       resetBtn.addEventListener("click", () => {
         if (confirm("Reset to default values?")) {
           setDefaultValues();
@@ -558,12 +546,9 @@
         }
       });
 
-      // Actualizar preview cuando cambien los valores
-      ncStateInput.addEventListener("input", updateTaxPreview);
-      mecklenburgInput.addEventListener("input", updateTaxPreview);
+      salesInput.addEventListener("input", updateTaxPreview);
       occupancyInput.addEventListener("input", updateTaxPreview);
 
-      // Cargar configuración al iniciar
       loadSettings();
     </script>
   </body>

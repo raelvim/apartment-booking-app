@@ -113,6 +113,117 @@
         box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
       }
 
+      /* Manual Billing Section */
+      .billing-section {
+        margin-top: 50px;
+      }
+      .billing-section h2 {
+        font-family: "Roboto", sans-serif;
+        border-bottom: 2px solid #eee;
+        padding-bottom: 10px;
+        margin-bottom: 20px;
+      }
+      .billing-form {
+        background: #f8f9fa;
+        padding: 25px;
+        border-radius: 8px;
+        margin-bottom: 30px;
+      }
+      .billing-form h3 {
+        margin-bottom: 15px;
+        font-size: 16px;
+        color: #333;
+      }
+      .billing-form .form-row {
+        display: flex;
+        gap: 15px;
+        margin-bottom: 12px;
+      }
+      .billing-form .form-row label {
+        display: block;
+        font-size: 12px;
+        font-weight: 600;
+        color: #555;
+        margin-bottom: 4px;
+      }
+      .billing-form .form-row input {
+        flex: 1;
+        padding: 10px 12px;
+        border: 2px solid #e0e0e0;
+        border-radius: 6px;
+        font-size: 14px;
+      }
+      .billing-form .form-row input:focus {
+        outline: none;
+        border-color: #667eea;
+      }
+      .btn-send-invoice {
+        background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%);
+        color: white;
+        border: none;
+        padding: 12px 24px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-weight: 600;
+        font-size: 14px;
+        transition: all 0.3s;
+      }
+      .btn-send-invoice:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(39, 174, 96, 0.3);
+      }
+      .charges-status {
+        display: inline-block;
+        padding: 3px 8px;
+        border-radius: 4px;
+        font-size: 12px;
+        font-weight: 600;
+      }
+      .charges-status.pending {
+        background: #fff3cd;
+        color: #856404;
+      }
+      .charges-status.paid {
+        background: #d4edda;
+        color: #155724;
+      }
+      .btn-mark-paid {
+        background: #27ae60;
+        color: white;
+        border: none;
+        padding: 6px 10px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 12px;
+      }
+      .btn-charge-delete {
+        background: #e74c3c;
+        color: white;
+        border: none;
+        padding: 6px 10px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 12px;
+        margin-left: 4px;
+      }
+      .billing-message {
+        padding: 10px 15px;
+        border-radius: 6px;
+        margin-bottom: 15px;
+        font-size: 14px;
+        display: none;
+      }
+      .billing-message.success {
+        background: #d4edda;
+        color: #155724;
+        display: block;
+      }
+      .billing-message.error {
+        background: #f8d7da;
+        color: #721c24;
+        display: block;
+      }
+
       @media (max-width: 768px) {
         .admin-header {
           flex-direction: column;
@@ -173,6 +284,56 @@
           style="display: none"
         >
           No completed or cancelled bookings.
+        </p>
+      </div>
+
+      <!-- Manual Billing Section -->
+      <div class="billing-section">
+        <h2>Manual Billing</h2>
+        <div id="billing-message" class="billing-message"></div>
+        <div class="billing-form">
+          <h3>Send Invoice to Guest</h3>
+          <div class="form-row">
+            <div>
+              <label>Guest Name</label>
+              <input type="text" id="billing-name" placeholder="John Smith" required />
+            </div>
+            <div>
+              <label>Guest Email</label>
+              <input type="email" id="billing-email" placeholder="john@email.com" required />
+            </div>
+          </div>
+          <div class="form-row">
+            <div>
+              <label>Description</label>
+              <input type="text" id="billing-desc" placeholder="Extra cleaning fee, damage charge, etc." required />
+            </div>
+            <div>
+              <label>Amount (USD)</label>
+              <input type="number" id="billing-amount" step="0.01" min="0.01" placeholder="50.00" required />
+            </div>
+          </div>
+          <button type="button" class="btn-send-invoice" id="btn-send-invoice">
+            <i class="fas fa-paper-plane"></i> Send Payment Link
+          </button>
+        </div>
+
+        <h3 style="font-family: 'Roboto', sans-serif; margin-bottom: 15px;">Charge History</h3>
+        <table class="bookings-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Guest</th>
+              <th>Description</th>
+              <th>Amount</th>
+              <th>Status</th>
+              <th class="actions-cell">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="charges-tbody"></tbody>
+        </table>
+        <p id="no-charges" class="no-bookings-message" style="display: none;">
+          No manual charges yet.
         </p>
       </div>
     </div>
@@ -363,8 +524,125 @@
             }
           });
 
+        // --- MANUAL BILLING ---
+        const billingMessage = document.getElementById("billing-message");
+        const chargesTbody = document.getElementById("charges-tbody");
+        const noChargesMsg = document.getElementById("no-charges");
+
+        function showBillingMessage(text, type = "success") {
+          billingMessage.textContent = text;
+          billingMessage.className = `billing-message ${type}`;
+          setTimeout(() => {
+            billingMessage.className = "billing-message";
+          }, 5000);
+        }
+
+        async function fetchAndRenderCharges() {
+          try {
+            const response = await fetchWithAuth(`${API_URL}/api/admin/charges`);
+            const charges = await response.json();
+            chargesTbody.innerHTML = "";
+            noChargesMsg.style.display = charges.length === 0 ? "block" : "none";
+            charges.forEach((charge) => {
+              const tr = document.createElement("tr");
+              const created = new Date(charge.created_at).toLocaleDateString("en-US");
+              tr.innerHTML = `
+                <td>${charge.id}</td>
+                <td>${charge.guest_name}<br><small style="color:#888">${charge.guest_email}</small></td>
+                <td>${charge.description}</td>
+                <td>$${parseFloat(charge.amount).toFixed(2)}</td>
+                <td><span class="charges-status ${charge.status}">${charge.status}</span></td>
+                <td class="actions-cell">
+                  ${charge.status === "pending" ? `<button class="btn-action btn-mark-paid" data-id="${charge.id}">Mark Paid</button>` : ""}
+                  <button class="btn-action btn-charge-delete" data-id="${charge.id}">Delete</button>
+                </td>
+              `;
+              chargesTbody.appendChild(tr);
+            });
+          } catch (error) {
+            console.error("Failed to fetch charges:", error);
+          }
+        }
+
+        // Send invoice
+        document.getElementById("btn-send-invoice").addEventListener("click", async () => {
+          const name = document.getElementById("billing-name").value.trim();
+          const email = document.getElementById("billing-email").value.trim();
+          const desc = document.getElementById("billing-desc").value.trim();
+          const amount = parseFloat(document.getElementById("billing-amount").value);
+
+          if (!name || !email || !desc || !amount || amount <= 0) {
+            showBillingMessage("Please fill in all fields with a valid amount.", "error");
+            return;
+          }
+
+          try {
+            const response = await fetchWithAuth(`${API_URL}/api/admin/charges`, {
+              method: "POST",
+              body: JSON.stringify({
+                guest_name: name,
+                guest_email: email,
+                description: desc,
+                amount,
+              }),
+            });
+            const result = await response.json();
+            if (!response.ok) throw new Error(result.error || "Failed to create charge");
+
+            if (result.url) {
+              // Copy payment link to clipboard for the admin to send
+              try {
+                await navigator.clipboard.writeText(result.url);
+                showBillingMessage(`Charge #${result.id} created! Payment link copied to clipboard.`, "success");
+              } catch {
+                showBillingMessage(`Charge #${result.id} created! Payment URL: ${result.url}`, "success");
+              }
+            } else {
+              showBillingMessage(`Charge #${result.id} created (no Stripe configured).`, "success");
+            }
+
+            // Clear form
+            document.getElementById("billing-name").value = "";
+            document.getElementById("billing-email").value = "";
+            document.getElementById("billing-desc").value = "";
+            document.getElementById("billing-amount").value = "";
+
+            fetchAndRenderCharges();
+          } catch (error) {
+            showBillingMessage(`Error: ${error.message}`, "error");
+          }
+        });
+
+        // Handle charge action buttons
+        document.getElementById("charges-tbody").addEventListener("click", async (e) => {
+          const target = e.target;
+          const chargeId = target.dataset.id;
+          if (!chargeId || !target.classList.contains("btn-action")) return;
+
+          if (target.classList.contains("btn-mark-paid")) {
+            try {
+              await fetchWithAuth(`${API_URL}/api/admin/charges/${chargeId}/pay`, { method: "POST" });
+              fetchAndRenderCharges();
+            } catch (error) {
+              console.error("Error marking charge as paid:", error);
+            }
+          }
+
+          if (target.classList.contains("btn-charge-delete")) {
+            if (confirm(`Delete charge #${chargeId}?`)) {
+              try {
+                await fetchWithAuth(`${API_URL}/api/admin/charges/${chargeId}`, { method: "DELETE" });
+                fetchAndRenderCharges();
+              } catch (error) {
+                console.error("Error deleting charge:", error);
+              }
+            }
+          }
+        });
+
         // --- INICIALIZAR ---
         fetchAndRenderBookings();
+        fetchAndRenderCharges();
         connectWebSocket();
       });
     </script>

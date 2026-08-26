@@ -115,50 +115,51 @@ const checkAdminAuth = (req, res, next) => {
 // ============ FUNCIONES AUXILIARES ============
 
 /**
- * Obtiene la configuración de impuestos
+ * Obtiene la configuración de impuestos Mecklenburg.
+ * Ventas: 8.25% + Ocupación: 8.00% = 16.25% sobre alojamiento + limpieza.
+ * Airbnb cobra y remite automáticamente estos impuestos.
  */
 function getTaxConfig() {
   return {
-    nc_state: parseFloat(process.env.TAX_NC_STATE) || 4.75,
-    mecklenburg_local: parseFloat(process.env.TAX_MECKLENBURG_LOCAL) || 2.25,
-    occupancy: parseFloat(process.env.TAX_OCCUPANCY) || 8.0,
+    mecklenburg_sales: parseFloat(process.env.TAX_MECKLENBURG_SALES) || 8.25,
+    mecklenburg_occupancy: parseFloat(process.env.TAX_MECKLENBURG_OCCUPANCY) || 8.0,
   };
 }
 
 /**
- * Calcula el precio total con impuestos
+ * Calcula el precio total con impuestos Mecklenburg.
+ * Total: 16.25% (Ventas 8.25% + Ocupación 8.00%) sobre alojamiento + limpieza.
  */
 function calculateTotalPrice(nights, pricePerNight, taxRates = null) {
   if (!taxRates) taxRates = getTaxConfig();
 
   const subtotal = nights * pricePerNight;
 
-  // Los impuestos NC y Mecklenburg se aplican sobre el subtotal
-  const ncTax = (subtotal * taxRates.nc_state) / 100;
-  const meckTax = (subtotal * taxRates.mecklenburg_local) / 100;
+  // Impuestos Mecklenburg sobre el subtotal
+  const salesTax = (subtotal * taxRates.mecklenburg_sales) / 100;
+  const occupancyTax = (subtotal * taxRates.mecklenburg_occupancy) / 100;
 
-  // El impuesto de ocupación se aplica sobre el subtotal
-  const occupancyTax = (subtotal * taxRates.occupancy) / 100;
-
-  const totalTax = ncTax + meckTax + occupancyTax;
+  const totalTax = salesTax + occupancyTax;
   const total = subtotal + totalTax;
 
   return {
     subtotal: Math.round(subtotal * 100) / 100,
-    nc_tax: Math.round(ncTax * 100) / 100,
-    mecklenburg_tax: Math.round(meckTax * 100) / 100,
-    occupancy_tax: Math.round(occupancyTax * 100) / 100,
+    mecklenburg_sales_tax: Math.round(salesTax * 100) / 100,
+    mecklenburg_occupancy_tax: Math.round(occupancyTax * 100) / 100,
     total_tax: Math.round(totalTax * 100) / 100,
     total: Math.round(total * 100) / 100,
   };
 }
 
 /**
- * Carga la configuración de impuestos desde la base de datos
+ * Carga la configuración de impuestos Mecklenburg desde la base de datos.
+ * Intenta usar las nuevas columnas mecklenburg_sales/mecklenburg_occupancy;
+ * si no existen (base de datos antigua), cae a los defaults.
  */
 function loadTaxSettingsFromDB(callback) {
   const sql = `
-    SELECT nc_state, mecklenburg_local, occupancy 
+    SELECT mecklenburg_sales, mecklenburg_occupancy,
+           nc_state, mecklenburg_local, occupancy
     FROM tax_settings 
     ORDER BY updated_at DESC 
     LIMIT 1
@@ -172,10 +173,10 @@ function loadTaxSettingsFromDB(callback) {
     }
 
     if (row) {
+      // Preferir columnas nuevas; si son null (DB vieja), usar defaults
       callback({
-        nc_state: row.nc_state,
-        mecklenburg_local: row.mecklenburg_local,
-        occupancy: row.occupancy,
+        mecklenburg_sales: row.mecklenburg_sales != null ? row.mecklenburg_sales : 8.25,
+        mecklenburg_occupancy: row.mecklenburg_occupancy != null ? row.mecklenburg_occupancy : 8.0,
       });
     } else {
       callback(getTaxConfig());
@@ -394,8 +395,27 @@ function handleStripeWebhook(req, res) {
 
   if (event.type === "checkout.session.completed") {
     const session = event.data.object;
-    const { checkIn, checkOut } = session.metadata || {};
+    const { checkIn, checkOut, charge_id } = session.metadata || {};
 
+    // Cobro manual
+    if (charge_id && session.payment_status === "paid") {
+      db.run(
+        `UPDATE manual_charges SET status = 'paid', paid_at = datetime('now') WHERE id = ?`,
+        [charge_id],
+        function (err) {
+          if (err) {
+            console.error("Error marking manual charge as paid:", err.message);
+            return;
+          }
+          if (this.changes > 0) {
+            console.log(`✅ Cobro manual #${charge_id} confirmado vía webhook`);
+            broadcastAdminUpdate();
+          }
+        },
+      );
+    }
+
+    // Reserva de alojamiento
     if (checkIn && checkOut && session.payment_status === "paid") {
       const sql = `INSERT OR IGNORE INTO bookings (checkIn, checkOut, bookingStatus, stripePaymentId) VALUES (?, ?, 'confirmed', ?)`;
       db.run(sql, [checkIn, checkOut, session.id], function (err) {
@@ -483,10 +503,11 @@ app.delete("/api/admin/bookings/:id", checkAdminAuth, (req, res) => {
 
 // ============ TAX SETTINGS ENDPOINTS ============
 
-// Obtener configuración de impuestos
+// Obtener configuración de impuestos Mecklenburg
 app.get("/api/admin/tax-settings", checkAdminAuth, (req, res) => {
   const sql = `
-    SELECT id, nc_state, mecklenburg_local, occupancy, updated_at
+    SELECT id, mecklenburg_sales, mecklenburg_occupancy,
+           nc_state, mecklenburg_local, occupancy, updated_at
     FROM tax_settings
     ORDER BY updated_at DESC
     LIMIT 1
@@ -498,32 +519,33 @@ app.get("/api/admin/tax-settings", checkAdminAuth, (req, res) => {
     }
 
     if (row) {
-      res.json(row);
+      res.json({
+        id: row.id,
+        mecklenburg_sales: row.mecklenburg_sales != null ? row.mecklenburg_sales : 8.25,
+        mecklenburg_occupancy: row.mecklenburg_occupancy != null ? row.mecklenburg_occupancy : 8.0,
+        updated_at: row.updated_at,
+      });
     } else {
-      // Retornar valores por defecto si no hay registro
       res.json(getTaxConfig());
     }
   });
 });
 
-// Actualizar configuración de impuestos
+// Actualizar configuración de impuestos Mecklenburg
 app.post("/api/admin/tax-settings", checkAdminAuth, (req, res) => {
-  const { nc_state, mecklenburg_local, occupancy } = req.body;
+  const { mecklenburg_sales, mecklenburg_occupancy } = req.body;
 
-  if (
-    nc_state === undefined ||
-    mecklenburg_local === undefined ||
-    occupancy === undefined
-  ) {
+  if (mecklenburg_sales === undefined || mecklenburg_occupancy === undefined) {
     return res.status(400).json({ error: "Missing tax rates" });
   }
 
+  // Mantener columnas antiguas con valores por defecto para compatibilidad
   const sql = `
-    INSERT INTO tax_settings (nc_state, mecklenburg_local, occupancy, updated_at)
-    VALUES (?, ?, ?, datetime('now'))
+    INSERT INTO tax_settings (nc_state, mecklenburg_local, occupancy, mecklenburg_sales, mecklenburg_occupancy, updated_at)
+    VALUES (0, 0, 0, ?, ?, datetime('now'))
   `;
 
-  db.run(sql, [nc_state, mecklenburg_local, occupancy], function (err) {
+  db.run(sql, [mecklenburg_sales, mecklenburg_occupancy], function (err) {
     if (err) {
       return res.status(500).json({ error: err.message });
     }
@@ -531,10 +553,124 @@ app.post("/api/admin/tax-settings", checkAdminAuth, (req, res) => {
     res.json({
       message: "Tax settings updated",
       id: this.lastID,
-      nc_state,
-      mecklenburg_local,
-      occupancy,
+      mecklenburg_sales,
+      mecklenburg_occupancy,
     });
+  });
+});
+
+// ============ MANUAL BILLING ENDPOINTS ============
+
+// Crear un cobro manual (envía enlace de pago al cliente)
+app.post("/api/admin/charges", checkAdminAuth, async (req, res) => {
+  const { guest_name, guest_email, description, amount } = req.body;
+
+  if (!guest_name || !guest_email || !description || !amount) {
+    return res.status(400).json({ error: "Missing required fields: guest_name, guest_email, description, amount" });
+  }
+
+  if (amount <= 0) {
+    return res.status(400).json({ error: "Amount must be greater than 0" });
+  }
+
+  const sql = `
+    INSERT INTO manual_charges (guest_name, guest_email, description, amount)
+    VALUES (?, ?, ?, ?)
+  `;
+
+  db.run(sql, [guest_name, guest_email, description, amount], async function (err) {
+    if (err) {
+      return res.status(500).json({ error: err.message });
+    }
+
+    const chargeId = this.lastID;
+
+    // Crear sesión de pago en Stripe (o mock)
+    let sessionId = null;
+    let sessionUrl = null;
+
+    if (MOCK_PAYMENTS) {
+      sessionId = `mock_charge_${Date.now()}`;
+      sessionUrl = `${DOMAIN}/success.html?charge_id=${chargeId}`;
+      db.run(`UPDATE manual_charges SET stripe_session_id = ? WHERE id = ?`, [sessionId, chargeId]);
+    } else if (stripe) {
+      try {
+        const session = await stripe.checkout.sessions.create({
+          payment_method_types: ["card"],
+          customer_email: guest_email,
+          line_items: [
+            {
+              price_data: {
+                currency: "usd",
+                product_data: {
+                  name: description,
+                  description: `Manual charge for ${guest_name}`,
+                },
+                unit_amount: Math.round(amount * 100),
+              },
+              quantity: 1,
+            },
+          ],
+          mode: "payment",
+          success_url: `${DOMAIN}/success.html?charge_id=${chargeId}`,
+          cancel_url: `${DOMAIN}/cancel.html`,
+          metadata: {
+            charge_id: String(chargeId),
+            guest_name,
+            guest_email,
+          },
+        });
+        sessionId = session.id;
+        sessionUrl = session.url;
+        db.run(`UPDATE manual_charges SET stripe_session_id = ? WHERE id = ?`, [sessionId, chargeId]);
+      } catch (stripeErr) {
+        console.error("Stripe error creating manual charge:", stripeErr);
+        // El cobro se guarda de todas formas; el admin puede reintentar después
+      }
+    }
+
+    broadcastAdminUpdate();
+    res.status(201).json({
+      message: "Charge created",
+      id: chargeId,
+      stripe_session_id: sessionId,
+      url: sessionUrl,
+    });
+  });
+});
+
+// Listar cobros manuales
+app.get("/api/admin/charges", checkAdminAuth, (req, res) => {
+  const sql = `SELECT * FROM manual_charges ORDER BY created_at DESC`;
+  db.all(sql, [], (err, rows) => {
+    if (err) {
+      return res.status(500).json({ error: err.message });
+    }
+    res.json(rows);
+  });
+});
+
+// Actualizar estado de un cobro (marcar como pagado)
+app.post("/api/admin/charges/:id/pay", checkAdminAuth, (req, res) => {
+  const sql = `UPDATE manual_charges SET status = 'paid', paid_at = datetime('now') WHERE id = ?`;
+  db.run(sql, [req.params.id], function (err) {
+    if (err) {
+      return res.status(500).json({ error: err.message });
+    }
+    broadcastAdminUpdate();
+    res.json({ message: "Charge marked as paid", changes: this.changes });
+  });
+});
+
+// Eliminar un cobro manual
+app.delete("/api/admin/charges/:id", checkAdminAuth, (req, res) => {
+  const sql = `DELETE FROM manual_charges WHERE id = ?`;
+  db.run(sql, [req.params.id], function (err) {
+    if (err) {
+      return res.status(500).json({ error: err.message });
+    }
+    broadcastAdminUpdate();
+    res.json({ message: "Charge deleted", changes: this.changes });
   });
 });
 

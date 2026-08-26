@@ -166,16 +166,12 @@ document.addEventListener("DOMContentLoaded", () => {
                 <span>$${pricing.subtotal.toFixed(2)}</span>
               </div>
               <div class="price-row tax-row">
-                <span>NC State Tax (${((pricing.nc_tax / pricing.subtotal) * 100).toFixed(2)}%):</span>
-                <span>$${pricing.nc_tax.toFixed(2)}</span>
+                <span>Mecklenburg Sales Tax (${((pricing.mecklenburg_sales_tax / pricing.subtotal) * 100).toFixed(2)}%):</span>
+                <span>$${pricing.mecklenburg_sales_tax.toFixed(2)}</span>
               </div>
               <div class="price-row tax-row">
-                <span>Mecklenburg Tax (${((pricing.mecklenburg_tax / pricing.subtotal) * 100).toFixed(2)}%):</span>
-                <span>$${pricing.mecklenburg_tax.toFixed(2)}</span>
-              </div>
-              <div class="price-row tax-row">
-                <span>Occupancy Tax (${((pricing.occupancy_tax / pricing.subtotal) * 100).toFixed(2)}%):</span>
-                <span>$${pricing.occupancy_tax.toFixed(2)}</span>
+                <span>Mecklenburg Occupancy Tax (${((pricing.mecklenburg_occupancy_tax / pricing.subtotal) * 100).toFixed(2)}%):</span>
+                <span>$${pricing.mecklenburg_occupancy_tax.toFixed(2)}</span>
               </div>
               <div class="price-row total-row">
                 <span><strong>Total:</strong></span>
@@ -197,9 +193,8 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("confirm-checkout").textContent = checkOut;
     document.getElementById("confirm-nights").textContent = nights;
     document.getElementById("confirm-base").textContent = `$${pricing.subtotal.toFixed(2)}`;
-    document.getElementById("confirm-nc-tax").textContent = `$${pricing.nc_tax.toFixed(2)}`;
-    document.getElementById("confirm-meck-tax").textContent = `$${pricing.mecklenburg_tax.toFixed(2)}`;
-    document.getElementById("confirm-occupancy").textContent = `$${pricing.occupancy_tax.toFixed(2)}`;
+    document.getElementById("confirm-meck-sales").textContent = `$${pricing.mecklenburg_sales_tax.toFixed(2)}`;
+    document.getElementById("confirm-meck-occupancy").textContent = `$${pricing.mecklenburg_occupancy_tax.toFixed(2)}`;
     document.getElementById("confirm-total").textContent = `$${pricing.total.toFixed(2)}`;
 
     confirmModal.classList.add("show");

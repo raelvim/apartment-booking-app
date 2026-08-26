@@ -19,7 +19,7 @@ const db = new sqlite3.Database(dbPath, (err) => {
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     checkIn TEXT NOT NULL,
     checkOut TEXT NOT NULL,
-    bookingStatus TEXT, -- <-- Simplificado. El valor se lo daremos al insertar.
+    bookingStatus TEXT,
     stripePaymentId TEXT
 )`,
       (err) => {
@@ -56,7 +56,8 @@ const db = new sqlite3.Database(dbPath, (err) => {
         }
       },
     );
-    // Configuración de impuestos (faltaba esta tabla; el panel admin la necesita)
+
+    // Configuración de impuestos
     db.run(
       `CREATE TABLE IF NOT EXISTS tax_settings (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -68,6 +69,37 @@ const db = new sqlite3.Database(dbPath, (err) => {
       (err) => {
         if (err) {
           console.error("Error al crear la tabla tax_settings", err.message);
+        }
+      },
+    );
+
+    // Migración: agregar columnas de impuestos Mecklenburg actualizados
+    // Ventas: 8.25%, Ocupación: 8.00%
+    db.run(
+      `ALTER TABLE tax_settings ADD COLUMN mecklenburg_sales REAL DEFAULT 8.25`,
+      () => {}, // ignora error si la columna ya existe
+    );
+    db.run(
+      `ALTER TABLE tax_settings ADD COLUMN mecklenburg_occupancy REAL DEFAULT 8.00`,
+      () => {}, // ignora error si la columna ya existe
+    );
+
+    // Cobros manuales (facturas enviadas a clientes)
+    db.run(
+      `CREATE TABLE IF NOT EXISTS manual_charges (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    guest_name TEXT NOT NULL,
+    guest_email TEXT NOT NULL,
+    description TEXT NOT NULL,
+    amount REAL NOT NULL,
+    status TEXT DEFAULT 'pending',
+    stripe_session_id TEXT,
+    created_at TEXT DEFAULT (datetime('now')),
+    paid_at TEXT
+)`,
+      (err) => {
+        if (err) {
+          console.error("Error al crear la tabla manual_charges", err.message);
         }
       },
     );
