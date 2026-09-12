@@ -96,6 +96,39 @@ const db = new sqlite3.Database(dbPath, (err) => {
       () => {}, // ignora error si la columna ya existe
     );
 
+    // Migración: agregar columna de tarifa por noche en tax_settings
+    db.run(
+      `ALTER TABLE tax_settings ADD COLUMN nightly_rate REAL DEFAULT 150`,
+      () => {}, // ignora error si la columna ya existe
+    );
+
+    // Migración: número de huéspedes por reserva
+    db.run(
+      `ALTER TABLE bookings ADD COLUMN guests INTEGER DEFAULT 2`,
+      () => {}, // ignora error si la columna ya existe
+    );
+
+    // Bloqueos temporales de fechas mientras el pago está en curso.
+    // Evitan reservas dobles simultáneas: si el pago se completa, el webhook
+    // convierte el bloqueo en reserva; si expira o falla, se libera.
+    db.run(
+      `CREATE TABLE IF NOT EXISTS booking_holds (
+    id TEXT PRIMARY KEY,
+    checkIn TEXT NOT NULL,
+    checkOut TEXT NOT NULL,
+    rental_type TEXT DEFAULT 'short_stay',
+    stripe_session_id TEXT,
+    status TEXT DEFAULT 'active',
+    expires_at TEXT NOT NULL,
+    created_at TEXT DEFAULT (datetime('now'))
+)`,
+      (err) => {
+        if (err) {
+          console.error("Error al crear la tabla booking_holds", err.message);
+        }
+      },
+    );
+
     // Cobros manuales (facturas enviadas a clientes)
     db.run(
       `CREATE TABLE IF NOT EXISTS manual_charges (

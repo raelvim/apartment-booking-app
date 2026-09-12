@@ -1,0 +1,189 @@
+// Pruebas de seguridad de la API (contra MOCK_PAYMENTS, servidor en :3001)
+// Uso: node test-security.js
+const API = "http://localhost:3001";
+const fs = require("fs");
+
+let passed = 0;
+let failed = 0;
+
+function check(name, cond, detail = "") {
+  if (cond) {
+    passed++;
+    console.log(`  ✅ ${name}`);
+  } else {
+    failed++;
+    console.log(`  ❌ ${name} ${detail}`);
+  }
+}
+
+async function req(method, p, body, headers = {}) {
+  const r = await fetch(`${API}${p}`, {
+    method,
+    headers: {
+      "Content-Type": "application/json",
+      // IP simulada propia de esta batería: así no comparte el rate limit de
+      // checkout con test-booking-flow.js cuando ambos corren seguidos
+      // (el servidor corre con trust proxy, por eso respeta X-Forwarded-For).
+      "X-Forwarded-For": "10.99.0.1",
+      ...headers,
+    },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  return r;
+}
+
+(async () => {
+  const env = fs.readFileSync("server/.env", "utf8");
+  const ADMIN_PASSWORD = env.match(/^ADMIN_PASSWORD=(.*)$/m)[1].trim();
+
+  console.log("\n[Autenticación y autorización]");
+  let r = await req("GET", "/api/admin/bookings");
+  check("admin sin token → 401", r.status === 401, `status=${r.status}`);
+
+  r = await req("GET", "/api/admin/bookings", null, {
+    Authorization: "Bearer token_falso",
+  });
+  check("token falso → 403", r.status === 403, `status=${r.status}`);
+
+  r = await req("POST", "/api/admin/login", { password: "wrong" });
+  check("login incorrecto → 401", r.status === 401, `status=${r.status}`);
+
+  r = await req("POST", "/api/admin/login", { password: ADMIN_PASSWORD });
+  const login = await r.json();
+  check(
+    "login correcto → 200 + JWT",
+    r.status === 200 && !!login.token,
+    `status=${r.status}`,
+  );
+
+  r = await req("GET", "/api/admin/bookings", null, {
+    Authorization: `Bearer ${login.token}`,
+  });
+  check("admin con token válido → 200", r.status === 200, `status=${r.status}`);
+
+  // Rate limit del login: el 6.º intento en 15 min debe ser 429
+  let last;
+  for (let i = 0; i < 6; i++) {
+    last = await req("POST", "/api/admin/login", { password: "x" });
+  }
+  check(
+    "rate limit del login (6.º intento → 429)",
+    last.status === 429,
+    `status=${last.status}`,
+  );
+
+  console.log("\n[Inyección y validación de entrada]");
+  r = await req("POST", "/api/create-checkout-session", {
+    checkIn: "2027-01-01' OR '1'='1",
+    checkOut: "2027-01-15",
+  });
+  check("SQLi en checkIn → 400", r.status === 400, `status=${r.status}`);
+
+  r = await req("POST", "/api/create-checkout-session", {
+    checkIn: "2036-01-05",
+    checkOut: "2036-01-20",
+    guests: 99,
+  });
+  check("99 huéspedes → 400", r.status === 400, `status=${r.status}`);
+
+  r = await req("POST", "/api/create-checkout-session", {
+    checkIn: "2036-01-05",
+    checkOut: "2036-01-20",
+    guests: -3,
+  });
+  check("huéspedes negativos → 400", r.status === 400, `status=${r.status}`);
+
+  r = await req("POST", "/api/create-checkout-session", {
+    checkIn: "2020-01-01",
+    checkOut: "2020-01-15",
+    guests: 2,
+  });
+  check("check-in en el pasado → 400", r.status === 400, `status=${r.status}`);
+
+  r = await req("POST", "/api/create-checkout-session", {
+    checkIn: "2036-01-20",
+    checkOut: "2036-01-05",
+    guests: 2,
+  });
+  check(
+    "check-out antes del check-in → 400",
+    r.status === 400,
+    `status=${r.status}`,
+  );
+
+  r = await req("POST", "/api/create-checkout-session", {
+    rental_type: "monthly",
+    checkIn: "2036-01-05",
+    months: 99,
+  });
+  check("99 meses → 400", r.status === 400, `status=${r.status}`);
+
+  r = await req("POST", "/api/create-checkout-session", {
+    checkIn: "2035-06-01",
+    checkOut: "2035-06-15",
+    guests: 2,
+  });
+  check(
+    "reserva a >18 meses vista → 400",
+    r.status === 400,
+    `status=${r.status}`,
+  );
+
+  r = await req("POST", "/api/create-checkout-session", {
+    checkIn: "2036-01-05",
+    checkOut: "2039-01-05", // ~3 años de estancia
+    guests: 2,
+  });
+  check(
+    "estancia de más de 365 noches → 400",
+    r.status === 400,
+    `status=${r.status}`,
+  );
+
+  r = await req("POST", "/api/create-checkout-session", {
+    rental_type: "monthly",
+    checkIn: "2038-01-05",
+    months: 3,
+  });
+  check(
+    "mensual a >18 meses vista → 400",
+    r.status === 400,
+    `status=${r.status}`,
+  );
+
+  console.log("\n[Confirmación de reservas]");
+  r = await req("POST", "/api/bookings", { sessionId: "mock_inexistente" });
+  check(
+    "confirmar con sesión inexistente → 400",
+    r.status === 400,
+    `status=${r.status}`,
+  );
+
+  r = await req("POST", "/api/bookings", {});
+  check(
+    "confirmar sin sessionId → 400",
+    r.status === 400,
+    `status=${r.status}`,
+  );
+
+  console.log("\n[Límites y webhook]");
+  r = await req("POST", "/api/calculate-price", {
+    checkIn: "2036-01-05",
+    checkOut: "2036-01-20",
+    junk: "x".repeat(20000),
+  });
+  check("body >10kb → 413", r.status === 413, `status=${r.status}`);
+
+  r = await req("POST", "/api/stripe/webhook", {});
+  check(
+    "webhook sin firma → 400/500",
+    r.status === 400 || r.status === 500,
+    `status=${r.status}`,
+  );
+
+  console.log(`\n===== RESULTADO: ${passed} pasaron, ${failed} fallaron =====`);
+  process.exit(failed > 0 ? 1 : 0);
+})().catch((e) => {
+  console.error("Error en las pruebas:", e);
+  process.exit(1);
+});

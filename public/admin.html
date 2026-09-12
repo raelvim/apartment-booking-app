@@ -318,21 +318,43 @@
           <div class="form-row">
             <div>
               <label>Guest Name</label>
-              <input type="text" id="billing-name" placeholder="John Smith" required />
+              <input
+                type="text"
+                id="billing-name"
+                placeholder="John Smith"
+                required
+              />
             </div>
             <div>
               <label>Guest Email</label>
-              <input type="email" id="billing-email" placeholder="john@email.com" required />
+              <input
+                type="email"
+                id="billing-email"
+                placeholder="john@email.com"
+                required
+              />
             </div>
           </div>
           <div class="form-row">
             <div>
               <label>Description</label>
-              <input type="text" id="billing-desc" placeholder="Extra cleaning fee, damage charge, etc." required />
+              <input
+                type="text"
+                id="billing-desc"
+                placeholder="Extra cleaning fee, damage charge, etc."
+                required
+              />
             </div>
             <div>
               <label>Amount (USD)</label>
-              <input type="number" id="billing-amount" step="0.01" min="0.01" placeholder="50.00" required />
+              <input
+                type="number"
+                id="billing-amount"
+                step="0.01"
+                min="0.01"
+                placeholder="50.00"
+                required
+              />
             </div>
           </div>
           <button type="button" class="btn-send-invoice" id="btn-send-invoice">
@@ -340,7 +362,14 @@
           </button>
         </div>
 
-        <h3 style="font-family: 'Roboto', sans-serif; margin-bottom: 15px;">Charge History</h3>
+        <h3
+          style="
+            font-family: &quot;Roboto&quot;, sans-serif;
+            margin-bottom: 15px;
+          "
+        >
+          Charge History
+        </h3>
         <table class="bookings-table">
           <thead>
             <tr>
@@ -354,7 +383,7 @@
           </thead>
           <tbody id="charges-tbody"></tbody>
         </table>
-        <p id="no-charges" class="no-bookings-message" style="display: none;">
+        <p id="no-charges" class="no-bookings-message" style="display: none">
           No manual charges yet.
         </p>
       </div>
@@ -444,10 +473,22 @@
           const checkOutDate = new Date(booking.checkOut);
           const isPastOrCancelled =
             booking.bookingStatus !== "confirmed" || checkOutDate < new Date();
-          const rentalType = booking.rental_type === "monthly" ? "Monthly" : "Short Stay";
-          const typeBadge = booking.rental_type === "monthly"
-            ? `<span style="background:#667eea;color:white;padding:2px 8px;border-radius:4px;font-size:11px;">Monthly</span>`
-            : `<span style="background:#95a5a6;color:white;padding:2px 8px;border-radius:4px;font-size:11px;">Short Stay</span>`;
+          const rentalType =
+            booking.rental_type === "monthly" ? "Monthly" : "Short Stay";
+          const typeBadge =
+            booking.rental_type === "monthly"
+              ? `<span style="background:#667eea;color:white;padding:2px 8px;border-radius:4px;font-size:11px;">Monthly</span>`
+              : `<span style="background:#95a5a6;color:white;padding:2px 8px;border-radius:4px;font-size:11px;">Short Stay</span>`;
+
+          // Escapa texto antes de meterlo en innerHTML (evita XSS almacenado)
+          function escapeHtml(value) {
+            return String(value ?? "")
+              .replace(/&/g, "&amp;")
+              .replace(/</g, "&lt;")
+              .replace(/>/g, "&gt;")
+              .replace(/"/g, "&quot;")
+              .replace(/'/g, "&#39;");
+          }
 
           tr.innerHTML = `
                 <td>${booking.id}</td>
@@ -566,19 +607,25 @@
 
         async function fetchAndRenderCharges() {
           try {
-            const response = await fetchWithAuth(`${API_URL}/api/admin/charges`);
+            const response = await fetchWithAuth(
+              `${API_URL}/api/admin/charges`,
+            );
             const charges = await response.json();
             chargesTbody.innerHTML = "";
-            noChargesMsg.style.display = charges.length === 0 ? "block" : "none";
+            noChargesMsg.style.display =
+              charges.length === 0 ? "block" : "none";
             charges.forEach((charge) => {
               const tr = document.createElement("tr");
-              const created = new Date(charge.created_at).toLocaleDateString("en-US");
+              const created = new Date(charge.created_at).toLocaleDateString(
+                "en-US",
+              );
+              // guest_name/email/description son texto libre: escapar antes de innerHTML
               tr.innerHTML = `
                 <td>${charge.id}</td>
-                <td>${charge.guest_name}<br><small style="color:#888">${charge.guest_email}</small></td>
-                <td>${charge.description}</td>
+                <td>${escapeHtml(charge.guest_name)}<br><small style="color:#888">${escapeHtml(charge.guest_email)}</small></td>
+                <td>${escapeHtml(charge.description)}</td>
                 <td>$${parseFloat(charge.amount).toFixed(2)}</td>
-                <td><span class="charges-status ${charge.status}">${charge.status}</span></td>
+                <td><span class="charges-status ${charge.status === "paid" ? "paid" : "pending"}">${charge.status === "paid" ? "paid" : "pending"}</span></td>
                 <td class="actions-cell">
                   ${charge.status === "pending" ? `<button class="btn-action btn-mark-paid" data-id="${charge.id}">Mark Paid</button>` : ""}
                   <button class="btn-action btn-charge-delete" data-id="${charge.id}">Delete</button>
@@ -592,80 +639,108 @@
         }
 
         // Send invoice
-        document.getElementById("btn-send-invoice").addEventListener("click", async () => {
-          const name = document.getElementById("billing-name").value.trim();
-          const email = document.getElementById("billing-email").value.trim();
-          const desc = document.getElementById("billing-desc").value.trim();
-          const amount = parseFloat(document.getElementById("billing-amount").value);
+        document
+          .getElementById("btn-send-invoice")
+          .addEventListener("click", async () => {
+            const name = document.getElementById("billing-name").value.trim();
+            const email = document.getElementById("billing-email").value.trim();
+            const desc = document.getElementById("billing-desc").value.trim();
+            const amount = parseFloat(
+              document.getElementById("billing-amount").value,
+            );
 
-          if (!name || !email || !desc || !amount || amount <= 0) {
-            showBillingMessage("Please fill in all fields with a valid amount.", "error");
-            return;
-          }
-
-          try {
-            const response = await fetchWithAuth(`${API_URL}/api/admin/charges`, {
-              method: "POST",
-              body: JSON.stringify({
-                guest_name: name,
-                guest_email: email,
-                description: desc,
-                amount,
-              }),
-            });
-            const result = await response.json();
-            if (!response.ok) throw new Error(result.error || "Failed to create charge");
-
-            if (result.url) {
-              // Copy payment link to clipboard for the admin to send
-              try {
-                await navigator.clipboard.writeText(result.url);
-                showBillingMessage(`Charge #${result.id} created! Payment link copied to clipboard.`, "success");
-              } catch {
-                showBillingMessage(`Charge #${result.id} created! Payment URL: ${result.url}`, "success");
-              }
-            } else {
-              showBillingMessage(`Charge #${result.id} created (no Stripe configured).`, "success");
+            if (!name || !email || !desc || !amount || amount <= 0) {
+              showBillingMessage(
+                "Please fill in all fields with a valid amount.",
+                "error",
+              );
+              return;
             }
 
-            // Clear form
-            document.getElementById("billing-name").value = "";
-            document.getElementById("billing-email").value = "";
-            document.getElementById("billing-desc").value = "";
-            document.getElementById("billing-amount").value = "";
-
-            fetchAndRenderCharges();
-          } catch (error) {
-            showBillingMessage(`Error: ${error.message}`, "error");
-          }
-        });
-
-        // Handle charge action buttons
-        document.getElementById("charges-tbody").addEventListener("click", async (e) => {
-          const target = e.target;
-          const chargeId = target.dataset.id;
-          if (!chargeId || !target.classList.contains("btn-action")) return;
-
-          if (target.classList.contains("btn-mark-paid")) {
             try {
-              await fetchWithAuth(`${API_URL}/api/admin/charges/${chargeId}/pay`, { method: "POST" });
+              const response = await fetchWithAuth(
+                `${API_URL}/api/admin/charges`,
+                {
+                  method: "POST",
+                  body: JSON.stringify({
+                    guest_name: name,
+                    guest_email: email,
+                    description: desc,
+                    amount,
+                  }),
+                },
+              );
+              const result = await response.json();
+              if (!response.ok)
+                throw new Error(result.error || "Failed to create charge");
+
+              if (result.url) {
+                // Copy payment link to clipboard for the admin to send
+                try {
+                  await navigator.clipboard.writeText(result.url);
+                  showBillingMessage(
+                    `Charge #${result.id} created! Payment link copied to clipboard.`,
+                    "success",
+                  );
+                } catch {
+                  showBillingMessage(
+                    `Charge #${result.id} created! Payment URL: ${result.url}`,
+                    "success",
+                  );
+                }
+              } else {
+                showBillingMessage(
+                  `Charge #${result.id} created (no Stripe configured).`,
+                  "success",
+                );
+              }
+
+              // Clear form
+              document.getElementById("billing-name").value = "";
+              document.getElementById("billing-email").value = "";
+              document.getElementById("billing-desc").value = "";
+              document.getElementById("billing-amount").value = "";
+
               fetchAndRenderCharges();
             } catch (error) {
-              console.error("Error marking charge as paid:", error);
+              showBillingMessage(`Error: ${error.message}`, "error");
             }
-          }
+          });
 
-          if (target.classList.contains("btn-charge-delete")) {
-            if (confirm(`Delete charge #${chargeId}?`)) {
+        // Handle charge action buttons
+        document
+          .getElementById("charges-tbody")
+          .addEventListener("click", async (e) => {
+            const target = e.target;
+            const chargeId = target.dataset.id;
+            if (!chargeId || !target.classList.contains("btn-action")) return;
+
+            if (target.classList.contains("btn-mark-paid")) {
               try {
-                await fetchWithAuth(`${API_URL}/api/admin/charges/${chargeId}`, { method: "DELETE" });
+                await fetchWithAuth(
+                  `${API_URL}/api/admin/charges/${chargeId}/pay`,
+                  { method: "POST" },
+                );
                 fetchAndRenderCharges();
               } catch (error) {
-                console.error("Error deleting charge:", error);
+                console.error("Error marking charge as paid:", error);
               }
             }
-          }
-        });
+
+            if (target.classList.contains("btn-charge-delete")) {
+              if (confirm(`Delete charge #${chargeId}?`)) {
+                try {
+                  await fetchWithAuth(
+                    `${API_URL}/api/admin/charges/${chargeId}`,
+                    { method: "DELETE" },
+                  );
+                  fetchAndRenderCharges();
+                } catch (error) {
+                  console.error("Error deleting charge:", error);
+                }
+              }
+            }
+          });
 
         // --- INICIALIZAR ---
         fetchAndRenderBookings();

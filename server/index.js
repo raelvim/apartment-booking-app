@@ -7,6 +7,7 @@ const jwt = require("jsonwebtoken");
 const helmet = require("helmet");
 const rateLimit = require("express-rate-limit");
 const http = require("http");
+const crypto = require("crypto");
 const WebSocket = require("ws");
 const ical = require("node-ical");
 
@@ -26,6 +27,14 @@ const NODE_ENV = process.env.NODE_ENV || "development";
 const DOMAIN = process.env.DOMAIN;
 const STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET;
 const AIRBNB_ICAL_URL = process.env.AIRBNB_ICAL_URL;
+
+// Reglas tarifarias activas (los importes monetarios reales se leen de la DB)
+const MIN_NIGHTS = 10;
+const MAX_NIGHTS = 365; // techo razonable para una estancia corta
+const MAX_GUESTS = 6;
+const MAX_ADVANCE_MONTHS = 18; // nadie puede reservar a más de 18 meses vista
+const CLEANING_FEE = parseFloat(process.env.CLEANING_FEE) || 0;
+const HOLD_MINUTES = 35; // un poco más que la expiración de la sesión de Stripe (30 min)
 
 // Modo de prueba sin Stripe real: nunca se activa en producción, aunque la variable quede puesta por error.
 const MOCK_PAYMENTS =
@@ -98,6 +107,17 @@ const loginLimiter = rateLimit({
   message: { error: "Too many login attempts. Please try again later." },
 });
 
+// Límite para crear sesiones de pago: cada una crea un bloqueo temporal de
+// fechas, así que sin límite específico un atacante podría bloquear el
+// calendario entero creando bloques de 35 min una y otra vez.
+const checkoutLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many payment attempts. Please try again later." },
+});
+
 // ============ AUTENTICACIÓN ============
 const checkAdminAuth = (req, res, next) => {
   const authHeader = req.headers["authorization"];
@@ -122,7 +142,8 @@ const checkAdminAuth = (req, res, next) => {
 function getTaxConfig() {
   return {
     mecklenburg_sales: parseFloat(process.env.TAX_MECKLENBURG_SALES) || 8.25,
-    mecklenburg_occupancy: parseFloat(process.env.TAX_MECKLENBURG_OCCUPANCY) || 8.0,
+    mecklenburg_occupancy:
+      parseFloat(process.env.TAX_MECKLENBURG_OCCUPANCY) || 8.0,
   };
 }
 
@@ -130,24 +151,38 @@ function getTaxConfig() {
  * Calcula el precio total con impuestos Mecklenburg para estancia corta.
  * Total: 16.25% (Ventas 8.25% + Ocupación 8.00%) sobre alojamiento + limpieza.
  */
-function calculateTotalPrice(nights, pricePerNight, taxRates = null) {
+function calculateTotalPrice(
+  nights,
+  pricePerNight,
+  cleaningFee = CLEANING_FEE,
+  taxRates = null,
+) {
   if (!taxRates) taxRates = getTaxConfig();
 
   const subtotal = nights * pricePerNight;
+  const taxableBase = subtotal + cleaningFee;
 
-  // Impuestos Mecklenburg sobre el subtotal
-  const salesTax = (subtotal * taxRates.mecklenburg_sales) / 100;
-  const occupancyTax = (subtotal * taxRates.mecklenburg_occupancy) / 100;
+  // Impuestos Mecklenburg sobre alojamiento + limpieza
+  const salesTax = (taxableBase * taxRates.mecklenburg_sales) / 100;
+  const occupancyTax = (taxableBase * taxRates.mecklenburg_occupancy) / 100;
 
   const totalTax = salesTax + occupancyTax;
-  const total = subtotal + totalTax;
+  const total = taxableBase + totalTax;
 
   return {
+    rental_type: "short_stay",
+    nights,
+    nightly_rate: pricePerNight,
     subtotal: Math.round(subtotal * 100) / 100,
+    cleaning_fee: Math.round(cleaningFee * 100) / 100,
     mecklenburg_sales_tax: Math.round(salesTax * 100) / 100,
     mecklenburg_occupancy_tax: Math.round(occupancyTax * 100) / 100,
     total_tax: Math.round(totalTax * 100) / 100,
     total: Math.round(total * 100) / 100,
+    tax_rates: {
+      mecklenburg_sales: taxRates.mecklenburg_sales,
+      mecklenburg_occupancy: taxRates.mecklenburg_occupancy,
+    },
   };
 }
 
@@ -176,6 +211,10 @@ function calculateMonthlyPrice(months, monthlyRate, taxRates = null) {
     mecklenburg_occupancy_tax: 0,
     total_tax: Math.round(totalTax * 100) / 100,
     total: Math.round(total * 100) / 100,
+    tax_rates: {
+      mecklenburg_sales: taxRates.mecklenburg_sales,
+      mecklenburg_occupancy: taxRates.mecklenburg_occupancy,
+    },
   };
 }
 
@@ -203,8 +242,10 @@ function loadTaxSettingsFromDB(callback) {
     if (row) {
       // Preferir columnas nuevas; si son null (DB vieja), usar defaults
       callback({
-        mecklenburg_sales: row.mecklenburg_sales != null ? row.mecklenburg_sales : 8.25,
-        mecklenburg_occupancy: row.mecklenburg_occupancy != null ? row.mecklenburg_occupancy : 8.0,
+        mecklenburg_sales:
+          row.mecklenburg_sales != null ? row.mecklenburg_sales : 8.25,
+        mecklenburg_occupancy:
+          row.mecklenburg_occupancy != null ? row.mecklenburg_occupancy : 8.0,
       });
     } else {
       callback(getTaxConfig());
@@ -213,8 +254,58 @@ function loadTaxSettingsFromDB(callback) {
 }
 
 /**
- * Comprueba si un rango de fechas está libre, combinando reservas confirmadas
- * y bloqueos importados de calendarios externos (ej. Airbnb).
+ * Carga tarifas e impuestos desde la base de datos del servidor.
+ * Esta es la ÚNICA fuente de precios: nunca se usan valores enviados por el navegador.
+ */
+function loadRatesFromDB(callback) {
+  const sql = `
+    SELECT nightly_rate, monthly_rate, mecklenburg_sales, mecklenburg_occupancy
+    FROM tax_settings
+    ORDER BY updated_at DESC
+    LIMIT 1
+  `;
+  db.get(sql, [], (err, row) => {
+    if (err) {
+      console.error("Error loading rates:", err);
+      return callback({
+        nightly_rate: 150,
+        monthly_rate: 1800,
+        ...getTaxConfig(),
+      });
+    }
+    callback({
+      nightly_rate: row && row.nightly_rate != null ? row.nightly_rate : 150,
+      monthly_rate: row && row.monthly_rate != null ? row.monthly_rate : 1800,
+      mecklenburg_sales:
+        row && row.mecklenburg_sales != null ? row.mecklenburg_sales : 8.25,
+      mecklenburg_occupancy:
+        row && row.mecklenburg_occupancy != null
+          ? row.mecklenburg_occupancy
+          : 8.0,
+    });
+  });
+}
+
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+/**
+ * Calcula las noches entre dos fechas YYYY-MM-DD.
+ * Devuelve null si las fechas son inválidas o checkOut <= checkIn.
+ */
+function nightsBetween(checkIn, checkOut) {
+  if (!DATE_RE.test(checkIn || "") || !DATE_RE.test(checkOut || ""))
+    return null;
+  const start = new Date(`${checkIn}T00:00:00Z`);
+  const end = new Date(`${checkOut}T00:00:00Z`);
+  if (isNaN(start) || isNaN(end)) return null;
+  const nights = Math.round((end - start) / 86400000);
+  return nights > 0 ? nights : null;
+}
+
+/**
+ * Comprueba si un rango de fechas está libre, combinando reservas confirmadas,
+ * bloqueos importados de calendarios externos (ej. Airbnb) y bloqueos
+ * temporales activos de pagos en curso.
  */
 function checkAvailability(checkIn, checkOut) {
   return new Promise((resolve, reject) => {
@@ -222,6 +313,9 @@ function checkAvailability(checkIn, checkOut) {
       SELECT checkIn, checkOut FROM bookings WHERE bookingStatus = 'confirmed'
       UNION ALL
       SELECT checkIn, checkOut FROM external_blocks
+      UNION ALL
+      SELECT checkIn, checkOut FROM booking_holds
+      WHERE status = 'active' AND expires_at > datetime('now')
     `;
     db.all(sql, [], (err, rows) => {
       if (err) return reject(err);
@@ -231,6 +325,113 @@ function checkAvailability(checkIn, checkOut) {
       resolve(!hasOverlap);
     });
   });
+}
+
+// ============ BLOQUEOS TEMPORALES (HOLDS) ============
+
+/** Elimina bloqueos temporales cuyo pago nunca se completó. */
+function cleanupExpiredHolds() {
+  db.run(
+    `DELETE FROM booking_holds WHERE status = 'active' AND expires_at <= datetime('now')`,
+    (err) => {
+      if (err)
+        console.error("Error limpiando bloqueos expirados:", err.message);
+    },
+  );
+}
+
+/** Libera un bloqueo temporal (pago fallido, expirado o error creando la sesión). */
+function releaseHold(holdId) {
+  if (!holdId) return;
+  db.run(
+    `UPDATE booking_holds SET status = 'released' WHERE id = ? AND status = 'active'`,
+    [holdId],
+  );
+}
+
+function releaseHoldBySession(sessionId) {
+  if (!sessionId) return;
+  db.run(
+    `UPDATE booking_holds SET status = 'released' WHERE stripe_session_id = ? AND status = 'active'`,
+    [sessionId],
+  );
+}
+
+/** Marca el bloqueo como confirmado cuando el pago se completa. */
+function confirmHold(holdId, sessionId) {
+  if (!holdId) return;
+  db.run(
+    `UPDATE booking_holds SET status = 'confirmed', stripe_session_id = COALESCE(?, stripe_session_id) WHERE id = ?`,
+    [sessionId || null, holdId],
+  );
+}
+
+// Cola para serializar la creación de bloqueos: SQLite no permite dos
+// transacciones concurrentes en la misma conexión, así que las encadenamos.
+// Así, de dos reservas simultáneas para las mismas fechas solo una obtiene
+// el bloqueo; la otra recibe 409.
+let holdQueue = Promise.resolve();
+
+/**
+ * Crea un bloqueo temporal verificando la disponibilidad DENTRO de una
+ * transacción (BEGIN IMMEDIATE), de modo que dos reservas simultáneas para
+ * las mismas fechas no puedan pasar ambas: solo la primera obtiene el bloqueo.
+ * Devuelve el id del bloqueo, o null si las fechas están ocupadas.
+ */
+function createHold({ checkIn, checkOut, rentalType }) {
+  const run = () =>
+    new Promise((resolve, reject) => {
+      const holdId = crypto.randomUUID();
+      // Mismo formato que datetime('now') de SQLite (UTC) para comparar expiración
+      const expiresAt = new Date(Date.now() + HOLD_MINUTES * 60 * 1000)
+        .toISOString()
+        .slice(0, 19)
+        .replace("T", " ");
+
+      db.serialize(() => {
+        db.run("BEGIN IMMEDIATE TRANSACTION");
+        db.all(
+          `SELECT checkIn, checkOut FROM bookings WHERE bookingStatus = 'confirmed'
+           UNION ALL
+           SELECT checkIn, checkOut FROM external_blocks
+           UNION ALL
+           SELECT checkIn, checkOut FROM booking_holds
+           WHERE status = 'active' AND expires_at > datetime('now')`,
+          [],
+          (err, rows) => {
+            if (err) {
+              db.run("ROLLBACK");
+              return reject(err);
+            }
+            const hasOverlap = rows.some(
+              (r) => checkIn < r.checkOut && checkOut > r.checkIn,
+            );
+            if (hasOverlap) {
+              db.run("ROLLBACK");
+              return resolve(null);
+            }
+            db.run(
+              `INSERT INTO booking_holds (id, checkIn, checkOut, rental_type, expires_at) VALUES (?, ?, ?, ?, ?)`,
+              [holdId, checkIn, checkOut, rentalType, expiresAt],
+              (insertErr) => {
+                if (insertErr) {
+                  db.run("ROLLBACK");
+                  return reject(insertErr);
+                }
+                db.run("COMMIT", (commitErr) => {
+                  if (commitErr) return reject(commitErr);
+                  resolve(holdId);
+                });
+              },
+            );
+          },
+        );
+      });
+    });
+
+  const result = holdQueue.then(run, run);
+  holdQueue = result.catch(() => {});
+  return result;
 }
 
 // ============ API ENDPOINTS ============
@@ -262,68 +463,174 @@ app.get("/api/tax-rates", (req, res) => {
   });
 });
 
-// Endpoint para calcular precio total (con impuestos)
+// Endpoint para calcular precio total (con impuestos).
+// Las tarifas se leen SIEMPRE de la base de datos del servidor; cualquier
+// pricePerNight/monthly_rate/subtotal/total enviado por el navegador se ignora.
 app.post("/api/calculate-price", (req, res) => {
-  const { nights, pricePerNight, rental_type, months, monthly_rate } = req.body;
+  const { checkIn, checkOut, rental_type, months } = req.body;
 
-  // Arriendo mensual
-  if (rental_type === "monthly") {
-    if (!months || !monthly_rate) {
-      return res.status(400).json({ error: "Missing months or monthly_rate" });
+  loadRatesFromDB((rates) => {
+    // Arriendo mensual
+    if (rental_type === "monthly") {
+      const monthsInt = parseInt(months, 10);
+      if (!Number.isInteger(monthsInt) || monthsInt < 1 || monthsInt > 12) {
+        return res.status(400).json({ error: "Invalid number of months" });
+      }
+      return res.json(
+        calculateMonthlyPrice(monthsInt, rates.monthly_rate, rates),
+      );
     }
-    loadTaxSettingsFromDB((taxRates) => {
-      const pricing = calculateMonthlyPrice(months, monthly_rate, taxRates);
-      res.json(pricing);
-    });
-    return;
-  }
 
-  // Estancia corta (por noche)
-  if (!nights || !pricePerNight) {
-    return res.status(400).json({ error: "Missing nights or pricePerNight" });
-  }
-
-  loadTaxSettingsFromDB((taxRates) => {
-    const pricing = calculateTotalPrice(nights, pricePerNight, taxRates);
-    res.json(pricing);
+    // Estancia corta: las noches las calcula el servidor a partir de las fechas
+    const nights = nightsBetween(checkIn, checkOut);
+    if (!nights) {
+      return res
+        .status(400)
+        .json({ error: "Missing or invalid check-in/check-out dates" });
+    }
+    if (nights < MIN_NIGHTS) {
+      return res
+        .status(400)
+        .json({ error: `Minimum stay is ${MIN_NIGHTS} nights` });
+    }
+    res.json(
+      calculateTotalPrice(nights, rates.nightly_rate, CLEANING_FEE, rates),
+    );
   });
 });
 
-// Endpoint para crear sesión de pago Stripe
-app.post("/api/create-checkout-session", async (req, res) => {
-  const { nights, pricePerNight, checkIn, checkOut, rental_type, months, monthly_rate } = req.body;
+// Endpoint para crear sesión de pago Stripe.
+// SEGURIDAD: el precio se calcula exclusivamente en el servidor con las
+// tarifas de la base de datos. El navegador solo envía fechas, huéspedes y
+// tipo de reserva; cualquier precio/subtotal/impuesto/total enviado se ignora.
+app.post("/api/create-checkout-session", checkoutLimiter, async (req, res) => {
+  const { checkIn, checkOut, rental_type, months, guests } = req.body;
 
+  // Si no hay Stripe ni modo simulado, no se puede cobrar: error claro
+  if (!MOCK_PAYMENTS && !stripe) {
+    return res
+      .status(503)
+      .json({ error: "Payments are not configured on the server" });
+  }
+
+  // Huéspedes: opcional, validado en el servidor
+  const guestsInt = guests === undefined ? 2 : parseInt(guests, 10);
+  if (!Number.isInteger(guestsInt) || guestsInt < 1 || guestsInt > MAX_GUESTS) {
+    return res
+      .status(400)
+      .json({ error: `Guests must be between 1 and ${MAX_GUESTS}` });
+  }
+
+  const todayStr = new Date().toISOString().split("T")[0];
+  // Horizonte máximo de reserva: evita bloqueos de fechas a años vista
+  const maxAdvanceDate = new Date();
+  maxAdvanceDate.setUTCMonth(maxAdvanceDate.getUTCMonth() + MAX_ADVANCE_MONTHS);
+  const maxAdvanceStr = maxAdvanceDate.toISOString().split("T")[0];
+
+  let finalCheckIn = checkIn;
+  let finalCheckOut = checkOut;
+  let nights = null;
+  let monthsInt = null;
+
+  if (rental_type === "monthly") {
+    // Arriendo mensual: el servidor calcula el check-out (inicio + meses)
+    monthsInt = parseInt(months, 10);
+    if (!Number.isInteger(monthsInt) || monthsInt < 1 || monthsInt > 12) {
+      return res.status(400).json({ error: "Invalid number of months" });
+    }
+    if (!DATE_RE.test(checkIn || "") || checkIn < todayStr) {
+      return res.status(400).json({ error: "Missing or invalid start date" });
+    }
+    if (checkIn > maxAdvanceStr) {
+      return res.status(400).json({
+        error: `Bookings can only be made up to ${MAX_ADVANCE_MONTHS} months in advance`,
+      });
+    }
+    const end = new Date(`${checkIn}T00:00:00Z`);
+    end.setUTCMonth(end.getUTCMonth() + monthsInt);
+    finalCheckOut = end.toISOString().split("T")[0];
+  } else {
+    // Estancia corta: las noches las calcula el servidor a partir de las fechas
+    nights = nightsBetween(checkIn, checkOut);
+    if (!nights) {
+      return res
+        .status(400)
+        .json({ error: "Missing or invalid check-in/check-out dates" });
+    }
+    if (checkIn < todayStr) {
+      return res
+        .status(400)
+        .json({ error: "Check-in date cannot be in the past" });
+    }
+    if (checkIn > maxAdvanceStr) {
+      return res.status(400).json({
+        error: `Bookings can only be made up to ${MAX_ADVANCE_MONTHS} months in advance`,
+      });
+    }
+    if (nights < MIN_NIGHTS) {
+      return res
+        .status(400)
+        .json({ error: `Minimum stay is ${MIN_NIGHTS} nights` });
+    }
+    if (nights > MAX_NIGHTS) {
+      return res
+        .status(400)
+        .json({ error: `Maximum stay is ${MAX_NIGHTS} nights` });
+    }
+  }
+
+  let holdId = null;
   try {
-    let pricing;
-    let metadata;
+    // Tarifas e impuestos desde la base de datos del servidor
+    const rates = await new Promise((resolve) => loadRatesFromDB(resolve));
+    const pricing =
+      rental_type === "monthly"
+        ? calculateMonthlyPrice(monthsInt, rates.monthly_rate, rates)
+        : calculateTotalPrice(nights, rates.nightly_rate, CLEANING_FEE, rates);
+
+    // Validar que el importe final sea válido y mayor que cero
+    if (!pricing.total || pricing.total <= 0) {
+      return res.status(400).json({ error: "Invalid booking amount" });
+    }
+
+    // Refrescar el calendario de Airbnb justo antes de comprobar disponibilidad
+    // (syncAirbnbCalendar ya maneja sus propios errores; nunca lanza)
+    if (AIRBNB_ICAL_URL) {
+      await syncAirbnbCalendar();
+    }
+
+    // Disponibilidad + bloqueo temporal en una sola transacción:
+    // si las fechas están ocupadas NO se crea la sesión de Stripe,
+    // y dos reservas simultáneas no pueden pasar a la vez.
+    cleanupExpiredHolds();
+    holdId = await createHold({
+      checkIn: finalCheckIn,
+      checkOut: finalCheckOut,
+      rentalType: rental_type === "monthly" ? "monthly" : "short_stay",
+    });
+    if (!holdId) {
+      return res
+        .status(409)
+        .json({ error: "Selected dates are no longer available" });
+    }
+
+    const metadata = {
+      hold_id: holdId,
+      checkIn: finalCheckIn,
+      checkOut: finalCheckOut,
+      rental_type: rental_type === "monthly" ? "monthly" : "short_stay",
+      guests: String(guestsInt),
+    };
     let productName;
     let productDescription;
-
     if (rental_type === "monthly") {
-      // Arriendo mensual
-      if (!months || !monthly_rate || !checkIn || !checkOut) {
-        return res.status(400).json({ error: "Missing monthly rental information" });
-      }
-      pricing = calculateMonthlyPrice(months, monthly_rate);
-      metadata = { rental_type: "monthly", months: String(months), checkIn, checkOut };
+      metadata.months = String(monthsInt);
       productName = "Lakeside Serenity - Monthly Rental";
-      productDescription = `${months} month(s): ${checkIn} to ${checkOut}`;
+      productDescription = `${monthsInt} month(s): ${finalCheckIn} to ${finalCheckOut}`;
     } else {
-      // Estancia corta
-      if (!nights || !pricePerNight || !checkIn || !checkOut) {
-        return res.status(400).json({ error: "Missing payment information" });
-      }
-      // Validar disponibilidad en el servidor (nunca confiar solo en el cliente)
-      const isAvailable = await checkAvailability(checkIn, checkOut);
-      if (!isAvailable) {
-        return res
-          .status(409)
-          .json({ error: "Selected dates are no longer available" });
-      }
-      pricing = calculateTotalPrice(nights, pricePerNight);
-      metadata = { checkIn, checkOut, nights: String(nights) };
+      metadata.nights = String(nights);
       productName = "Lakeside Serenity - Apartment Stay";
-      productDescription = `${nights} night(s): ${checkIn} to ${checkOut}`;
+      productDescription = `${nights} night(s): ${finalCheckIn} to ${finalCheckOut}`;
     }
 
     // Modo simulado: no llama a Stripe, genera una "sesión" falsa para probar el flujo completo
@@ -333,6 +640,10 @@ app.post("/api/create-checkout-session", async (req, res) => {
         payment_status: "paid",
         metadata,
       });
+      db.run(`UPDATE booking_holds SET stripe_session_id = ? WHERE id = ?`, [
+        mockId,
+        holdId,
+      ]);
       return res.json({
         id: mockId,
         url: `${DOMAIN}/success.html?session_id=${mockId}`,
@@ -340,7 +651,7 @@ app.post("/api/create-checkout-session", async (req, res) => {
       });
     }
 
-    // Crear sesión en Stripe
+    // Crear sesión en Stripe con el total calculado por el servidor
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],
       line_items: [
@@ -357,10 +668,17 @@ app.post("/api/create-checkout-session", async (req, res) => {
         },
       ],
       mode: "payment",
+      // La sesión expira a los 30 min; si no se paga, el bloqueo se libera
+      expires_at: Math.floor(Date.now() / 1000) + 30 * 60,
       success_url: `${process.env.DOMAIN}/success.html?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${process.env.DOMAIN}/cancel.html`,
       metadata,
     });
+
+    db.run(`UPDATE booking_holds SET stripe_session_id = ? WHERE id = ?`, [
+      session.id,
+      holdId,
+    ]);
 
     res.json({
       id: session.id,
@@ -368,6 +686,8 @@ app.post("/api/create-checkout-session", async (req, res) => {
       pricing: pricing,
     });
   } catch (error) {
+    // Si algo falló después de crear el bloqueo, liberarlo
+    if (holdId) releaseHold(holdId);
     console.error("Stripe error:", error);
     res.status(500).json({ error: error.message });
   }
@@ -375,9 +695,9 @@ app.post("/api/create-checkout-session", async (req, res) => {
 
 // Endpoint para confirmar pago y crear reserva (respaldo por si el webhook no ha llegado aún)
 app.post("/api/bookings", async (req, res) => {
-  const { checkIn, checkOut, sessionId } = req.body;
+  const { sessionId } = req.body;
 
-  if (!checkIn || !checkOut || !sessionId) {
+  if (!sessionId) {
     return res.status(400).json({ error: "Missing required fields" });
   }
 
@@ -385,10 +705,11 @@ app.post("/api/bookings", async (req, res) => {
     // Verificar sesión: en modo simulado se lee de memoria, si no, se consulta a Stripe
     let session;
     if (MOCK_PAYMENTS && sessionId.startsWith("mock_")) {
-      session = mockSessions.get(sessionId);
-      if (!session) {
+      const mock = mockSessions.get(sessionId);
+      if (!mock) {
         return res.status(400).json({ error: "Mock session not found" });
       }
+      session = { id: sessionId, ...mock };
     } else {
       session = await stripe.checkout.sessions.retrieve(sessionId);
     }
@@ -397,10 +718,27 @@ app.post("/api/bookings", async (req, res) => {
       return res.status(400).json({ error: "Payment not confirmed" });
     }
 
+    // Las fechas de la reserva se toman de la metadata de la sesión pagada
+    // (lo que realmente pagó el cliente), nunca del cuerpo de la petición.
+    const meta = session.metadata || {};
+    const checkIn = meta.checkIn;
+    const checkOut = meta.checkOut;
+    if (!checkIn || !checkOut) {
+      return res.status(400).json({ error: "Session has no booking metadata" });
+    }
+    const rentalType = meta.rental_type || "short_stay";
+    const guests = parseInt(meta.guests, 10) || 2;
+
     // INSERT OR IGNORE: si el webhook ya guardó esta reserva (mismo stripePaymentId), no se duplica
-    const rentalType = session.metadata?.rental_type || "short_stay";
-    const sql = `INSERT OR IGNORE INTO bookings (checkIn, checkOut, bookingStatus, stripePaymentId, rental_type) VALUES (?, ?, ?, ?, ?)`;
-    const params = [checkIn, checkOut, "confirmed", session.id, rentalType];
+    const sql = `INSERT OR IGNORE INTO bookings (checkIn, checkOut, bookingStatus, stripePaymentId, rental_type, guests) VALUES (?, ?, ?, ?, ?, ?)`;
+    const params = [
+      checkIn,
+      checkOut,
+      "confirmed",
+      session.id,
+      rentalType,
+      guests,
+    ];
 
     db.run(sql, params, function (err) {
       if (err) {
@@ -411,6 +749,7 @@ app.post("/api/bookings", async (req, res) => {
       if (this.changes > 0) {
         broadcastAdminUpdate();
       }
+      confirmHold(meta.hold_id, session.id);
       res.status(201).json({
         message: "Booking created successfully",
         bookingId: this.lastID,
@@ -450,7 +789,7 @@ function handleStripeWebhook(req, res) {
 
   if (event.type === "checkout.session.completed") {
     const session = event.data.object;
-    const { checkIn, checkOut, charge_id } = session.metadata || {};
+    const { checkIn, checkOut, charge_id, hold_id } = session.metadata || {};
 
     // Cobro manual
     if (charge_id && session.payment_status === "paid") {
@@ -473,23 +812,40 @@ function handleStripeWebhook(req, res) {
     // Reserva de alojamiento
     if (checkIn && checkOut && session.payment_status === "paid") {
       const rentalType = session.metadata?.rental_type || "short_stay";
-      const sql = `INSERT OR IGNORE INTO bookings (checkIn, checkOut, bookingStatus, stripePaymentId, rental_type) VALUES (?, ?, 'confirmed', ?, ?)`;
-      db.run(sql, [checkIn, checkOut, session.id, rentalType], function (err) {
-        if (err) {
-          console.error(
-            "Error guardando reserva desde el webhook:",
-            err.message,
-          );
-          return;
-        }
-        if (this.changes > 0) {
-          console.log(
-            `✅ Reserva confirmada vía webhook: ${checkIn} → ${checkOut}`,
-          );
-          broadcastAdminUpdate();
-        }
-      });
+      const guests = parseInt(session.metadata?.guests, 10) || 2;
+      const sql = `INSERT OR IGNORE INTO bookings (checkIn, checkOut, bookingStatus, stripePaymentId, rental_type, guests) VALUES (?, ?, 'confirmed', ?, ?, ?)`;
+      db.run(
+        sql,
+        [checkIn, checkOut, session.id, rentalType, guests],
+        function (err) {
+          if (err) {
+            console.error(
+              "Error guardando reserva desde el webhook:",
+              err.message,
+            );
+            return;
+          }
+          if (this.changes > 0) {
+            console.log(
+              `✅ Reserva confirmada vía webhook: ${checkIn} → ${checkOut}`,
+            );
+            broadcastAdminUpdate();
+          }
+        },
+      );
+      confirmHold(hold_id, session.id);
     }
+  }
+
+  // Pago expirado o fallido: liberar el bloqueo temporal de las fechas
+  if (
+    event.type === "checkout.session.expired" ||
+    event.type === "checkout.session.async_payment_failed"
+  ) {
+    const session = event.data.object;
+    if (session.metadata?.hold_id) releaseHold(session.metadata.hold_id);
+    releaseHoldBySession(session.id);
+    console.log(`🔓 Bloqueo liberado por pago expirado/fallido: ${session.id}`);
   }
 
   res.json({ received: true });
@@ -563,21 +919,32 @@ app.delete("/api/admin/bookings/:id", checkAdminAuth, (req, res) => {
 app.get("/api/monthly-rate", (req, res) => {
   loadTaxSettingsFromDB((rates) => {
     // El monthly_rate viene de la DB; si no existe, usar default
-    db.get(`SELECT monthly_rate FROM tax_settings ORDER BY updated_at DESC LIMIT 1`, [], (err, row) => {
-      const monthlyRate = (row && row.monthly_rate != null) ? row.monthly_rate : 1800;
-      res.json({ monthly_rate: monthlyRate });
-    });
+    db.get(
+      `SELECT monthly_rate FROM tax_settings ORDER BY updated_at DESC LIMIT 1`,
+      [],
+      (err, row) => {
+        const monthlyRate =
+          row && row.monthly_rate != null ? row.monthly_rate : 1800;
+        res.json({ monthly_rate: monthlyRate });
+      },
+    );
   });
 });
 
 // Obtener configuración de tarifa mensual (admin)
 app.get("/api/admin/monthly-rate", checkAdminAuth, (req, res) => {
-  db.get(`SELECT monthly_rate FROM tax_settings ORDER BY updated_at DESC LIMIT 1`, [], (err, row) => {
-    if (err) {
-      return res.status(500).json({ error: err.message });
-    }
-    res.json({ monthly_rate: (row && row.monthly_rate != null) ? row.monthly_rate : 1800 });
-  });
+  db.get(
+    `SELECT monthly_rate FROM tax_settings ORDER BY updated_at DESC LIMIT 1`,
+    [],
+    (err, row) => {
+      if (err) {
+        return res.status(500).json({ error: err.message });
+      }
+      res.json({
+        monthly_rate: row && row.monthly_rate != null ? row.monthly_rate : 1800,
+      });
+    },
+  );
 });
 
 // Actualizar tarifa mensual (admin)
@@ -587,21 +954,29 @@ app.post("/api/admin/monthly-rate", checkAdminAuth, (req, res) => {
     return res.status(400).json({ error: "Invalid monthly rate" });
   }
   // Actualizar el registro más reciente de tax_settings
-  db.run(`UPDATE tax_settings SET monthly_rate = ? WHERE id = (SELECT id FROM tax_settings ORDER BY updated_at DESC LIMIT 1)`, [monthly_rate], function (err) {
-    if (err) {
-      // Si no existe registro, crear uno con defaults
-      db.run(`INSERT INTO tax_settings (nc_state, mecklenburg_local, occupancy, mecklenburg_sales, mecklenburg_occupancy, monthly_rate, updated_at) VALUES (0, 0, 0, 8.25, 8.0, ?, datetime('now'))`, [monthly_rate], function (err2) {
-        if (err2) {
-          return res.status(500).json({ error: err2.message });
-        }
+  db.run(
+    `UPDATE tax_settings SET monthly_rate = ? WHERE id = (SELECT id FROM tax_settings ORDER BY updated_at DESC LIMIT 1)`,
+    [monthly_rate],
+    function (err) {
+      if (err) {
+        // Si no existe registro, crear uno con defaults
+        db.run(
+          `INSERT INTO tax_settings (nc_state, mecklenburg_local, occupancy, mecklenburg_sales, mecklenburg_occupancy, monthly_rate, updated_at) VALUES (0, 0, 0, 8.25, 8.0, ?, datetime('now'))`,
+          [monthly_rate],
+          function (err2) {
+            if (err2) {
+              return res.status(500).json({ error: err2.message });
+            }
+            broadcastAdminUpdate();
+            res.json({ message: "Monthly rate updated", monthly_rate });
+          },
+        );
+      } else {
         broadcastAdminUpdate();
         res.json({ message: "Monthly rate updated", monthly_rate });
-      });
-    } else {
-      broadcastAdminUpdate();
-      res.json({ message: "Monthly rate updated", monthly_rate });
-    }
-  });
+      }
+    },
+  );
 });
 
 // ============ TAX SETTINGS ENDPOINTS ============
@@ -624,8 +999,10 @@ app.get("/api/admin/tax-settings", checkAdminAuth, (req, res) => {
     if (row) {
       res.json({
         id: row.id,
-        mecklenburg_sales: row.mecklenburg_sales != null ? row.mecklenburg_sales : 8.25,
-        mecklenburg_occupancy: row.mecklenburg_occupancy != null ? row.mecklenburg_occupancy : 8.0,
+        mecklenburg_sales:
+          row.mecklenburg_sales != null ? row.mecklenburg_sales : 8.25,
+        mecklenburg_occupancy:
+          row.mecklenburg_occupancy != null ? row.mecklenburg_occupancy : 8.0,
         monthly_rate: row.monthly_rate != null ? row.monthly_rate : 1800,
         updated_at: row.updated_at,
       });
@@ -651,19 +1028,23 @@ app.post("/api/admin/tax-settings", checkAdminAuth, (req, res) => {
     VALUES (0, 0, 0, ?, ?, ?, datetime('now'))
   `;
 
-  db.run(sql, [mecklenburg_sales, mecklenburg_occupancy, effectiveMonthlyRate], function (err) {
-    if (err) {
-      return res.status(500).json({ error: err.message });
-    }
-    broadcastAdminUpdate();
-    res.json({
-      message: "Tax settings updated",
-      id: this.lastID,
-      mecklenburg_sales,
-      mecklenburg_occupancy,
-      monthly_rate: effectiveMonthlyRate,
-    });
-  });
+  db.run(
+    sql,
+    [mecklenburg_sales, mecklenburg_occupancy, effectiveMonthlyRate],
+    function (err) {
+      if (err) {
+        return res.status(500).json({ error: err.message });
+      }
+      broadcastAdminUpdate();
+      res.json({
+        message: "Tax settings updated",
+        id: this.lastID,
+        mecklenburg_sales,
+        mecklenburg_occupancy,
+        monthly_rate: effectiveMonthlyRate,
+      });
+    },
+  );
 });
 
 // ============ MANUAL BILLING ENDPOINTS ============
@@ -673,7 +1054,10 @@ app.post("/api/admin/charges", checkAdminAuth, async (req, res) => {
   const { guest_name, guest_email, description, amount } = req.body;
 
   if (!guest_name || !guest_email || !description || !amount) {
-    return res.status(400).json({ error: "Missing required fields: guest_name, guest_email, description, amount" });
+    return res.status(400).json({
+      error:
+        "Missing required fields: guest_name, guest_email, description, amount",
+    });
   }
 
   if (amount <= 0) {
@@ -685,65 +1069,75 @@ app.post("/api/admin/charges", checkAdminAuth, async (req, res) => {
     VALUES (?, ?, ?, ?)
   `;
 
-  db.run(sql, [guest_name, guest_email, description, amount], async function (err) {
-    if (err) {
-      return res.status(500).json({ error: err.message });
-    }
-
-    const chargeId = this.lastID;
-
-    // Crear sesión de pago en Stripe (o mock)
-    let sessionId = null;
-    let sessionUrl = null;
-
-    if (MOCK_PAYMENTS) {
-      sessionId = `mock_charge_${Date.now()}`;
-      sessionUrl = `${DOMAIN}/success.html?charge_id=${chargeId}`;
-      db.run(`UPDATE manual_charges SET stripe_session_id = ? WHERE id = ?`, [sessionId, chargeId]);
-    } else if (stripe) {
-      try {
-        const session = await stripe.checkout.sessions.create({
-          payment_method_types: ["card"],
-          customer_email: guest_email,
-          line_items: [
-            {
-              price_data: {
-                currency: "usd",
-                product_data: {
-                  name: description,
-                  description: `Manual charge for ${guest_name}`,
-                },
-                unit_amount: Math.round(amount * 100),
-              },
-              quantity: 1,
-            },
-          ],
-          mode: "payment",
-          success_url: `${DOMAIN}/success.html?charge_id=${chargeId}`,
-          cancel_url: `${DOMAIN}/cancel.html`,
-          metadata: {
-            charge_id: String(chargeId),
-            guest_name,
-            guest_email,
-          },
-        });
-        sessionId = session.id;
-        sessionUrl = session.url;
-        db.run(`UPDATE manual_charges SET stripe_session_id = ? WHERE id = ?`, [sessionId, chargeId]);
-      } catch (stripeErr) {
-        console.error("Stripe error creating manual charge:", stripeErr);
-        // El cobro se guarda de todas formas; el admin puede reintentar después
+  db.run(
+    sql,
+    [guest_name, guest_email, description, amount],
+    async function (err) {
+      if (err) {
+        return res.status(500).json({ error: err.message });
       }
-    }
 
-    broadcastAdminUpdate();
-    res.status(201).json({
-      message: "Charge created",
-      id: chargeId,
-      stripe_session_id: sessionId,
-      url: sessionUrl,
-    });
-  });
+      const chargeId = this.lastID;
+
+      // Crear sesión de pago en Stripe (o mock)
+      let sessionId = null;
+      let sessionUrl = null;
+
+      if (MOCK_PAYMENTS) {
+        sessionId = `mock_charge_${Date.now()}`;
+        sessionUrl = `${DOMAIN}/success.html?charge_id=${chargeId}`;
+        db.run(`UPDATE manual_charges SET stripe_session_id = ? WHERE id = ?`, [
+          sessionId,
+          chargeId,
+        ]);
+      } else if (stripe) {
+        try {
+          const session = await stripe.checkout.sessions.create({
+            payment_method_types: ["card"],
+            customer_email: guest_email,
+            line_items: [
+              {
+                price_data: {
+                  currency: "usd",
+                  product_data: {
+                    name: description,
+                    description: `Manual charge for ${guest_name}`,
+                  },
+                  unit_amount: Math.round(amount * 100),
+                },
+                quantity: 1,
+              },
+            ],
+            mode: "payment",
+            success_url: `${DOMAIN}/success.html?charge_id=${chargeId}`,
+            cancel_url: `${DOMAIN}/cancel.html`,
+            metadata: {
+              charge_id: String(chargeId),
+              guest_name,
+              guest_email,
+            },
+          });
+          sessionId = session.id;
+          sessionUrl = session.url;
+          db.run(
+            `UPDATE manual_charges SET stripe_session_id = ? WHERE id = ?`,
+            [sessionId, chargeId],
+          );
+        } catch (stripeErr) {
+          console.error("Stripe error creating manual charge:", stripeErr);
+          // El cobro se guarda de todas formas; el admin puede reintentar después
+        }
+      }
+
+      broadcastAdminUpdate();
+      res.status(201).json({
+        message: "Charge created",
+        id: chargeId,
+        stripe_session_id: sessionId,
+        url: sessionUrl,
+      });
+    },
+  );
 });
 
 // Listar cobros manuales
@@ -915,6 +1309,11 @@ server.listen(PORT, () => {
   console.log(`🌐 Domain: ${DOMAIN}`);
   console.log(`📅 Calendar URL: ${DOMAIN}/api/calendar.ics`);
   console.log(`${"=".repeat(50)}\n`);
+
+  // Limpieza periódica de bloqueos temporales de pagos abandonados.
+  // La primera ejecución espera un poco para que database.js termine de crear las tablas.
+  setTimeout(cleanupExpiredHolds, 2000);
+  setInterval(cleanupExpiredHolds, 5 * 60 * 1000);
 
   if (AIRBNB_ICAL_URL) {
     syncAirbnbCalendar();

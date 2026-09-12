@@ -1,11 +1,11 @@
 // booking.js - Calendario con fechas bloqueadas por Airbnb/Bookings
-// NOTA DE SEGURIDAD: los precios los calcula SIEMPRE el servidor.
-// Este script solo envía fechas, número de huéspedes y tipo de reserva.
+const PRICE_PER_NIGHT = 150;
 const PROD_API_URL = "https://escapelakenorman-api.onrender.com";
 const API_URL = ["localhost", "127.0.0.1"].includes(window.location.hostname)
   ? `http://${window.location.hostname}:3001`
   : PROD_API_URL;
 const MIN_NIGHTS = 10;
+let MONTHLY_RATE = 1800; // default, se carga del servidor
 
 document.addEventListener("DOMContentLoaded", () => {
   const bookingForm = document.getElementById("booking-form");
@@ -56,48 +56,32 @@ document.addEventListener("DOMContentLoaded", () => {
   const monthlyFields = document.getElementById("monthly-fields");
   const monthlyStartInput = document.getElementById("monthly-start");
   const monthlyDurationSelect = document.getElementById("monthly-duration");
-  const guestsSelect = document.getElementById("guests");
 
-  /**
-   * Activa únicamente los campos del tipo de reserva seleccionado.
-   * Los campos ocultos se desactivan (disabled) y pierden el required,
-   * así la validación del formulario solo comprueba los campos visibles.
-   * Esto corrige el fallo que impedía reservar estancias de 10 a 29 noches
-   * porque el campo mensual oculto seguía siendo obligatorio.
-   */
-  function setRentalType(type) {
-    currentRentalType = type;
-    const isMonthly = type === "monthly";
-
-    shortStayFields.style.display = isMonthly ? "none" : "block";
-    monthlyFields.style.display = isMonthly ? "block" : "none";
-
-    shortStayFields.querySelectorAll("input, select").forEach((el) => {
-      el.disabled = isMonthly;
-      el.required = !isMonthly;
-    });
-    monthlyFields.querySelectorAll("input, select").forEach((el) => {
-      el.disabled = !isMonthly;
-      el.required = isMonthly;
-    });
-
-    if (isMonthly) {
-      updateMonthlyPriceDisplay();
-    } else {
-      updatePriceDisplay();
-    }
-  }
+  // Cargar tarifa mensual del servidor
+  fetch(`${API_URL}/api/monthly-rate`)
+    .then((r) => r.json())
+    .then((data) => {
+      if (data.monthly_rate) MONTHLY_RATE = data.monthly_rate;
+    })
+    .catch(() => {}); // usar default
 
   rentalBtns.forEach((btn) => {
     btn.addEventListener("click", () => {
       rentalBtns.forEach((b) => b.classList.remove("active"));
       btn.classList.add("active");
-      setRentalType(btn.dataset.type);
+      currentRentalType = btn.dataset.type;
+
+      if (currentRentalType === "monthly") {
+        shortStayFields.style.display = "none";
+        monthlyFields.style.display = "block";
+        updateMonthlyPriceDisplay();
+      } else {
+        shortStayFields.style.display = "block";
+        monthlyFields.style.display = "none";
+        updatePriceDisplay();
+      }
     });
   });
-
-  // Estado inicial: Short Stay activo, campos mensuales desactivados
-  setRentalType("short_stay");
 
   if (monthlyStartInput) {
     monthlyStartInput.addEventListener("change", updateMonthlyPriceDisplay);
@@ -116,13 +100,13 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     try {
-      // El servidor calcula el precio con SU tarifa mensual; no enviamos precios
       const response = await fetch(`${API_URL}/api/calculate-price`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           rental_type: "monthly",
           months,
+          monthly_rate: MONTHLY_RATE,
         }),
       });
 
@@ -137,7 +121,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 <span>$${pricing.subtotal.toFixed(2)}</span>
               </div>
               <div class="price-row tax-row">
-                <span>Mecklenburg Sales Tax (${pricing.tax_rates.mecklenburg_sales.toFixed(2)}%):</span>
+                <span>Mecklenburg Sales Tax (8.25%):</span>
                 <span>$${pricing.mecklenburg_sales_tax.toFixed(2)}</span>
               </div>
               <div class="price-row" style="color: #999; font-style: italic;">
@@ -257,44 +241,30 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
-    const nights = Math.round(
-      (checkOutDate - checkInDate) / (1000 * 60 * 60 * 24),
-    );
+    const nights = Math.round((checkOutDate - checkInDate) / (1000 * 60 * 60 * 24));
 
     try {
-      // El servidor calcula noches y precio con SU tarifa; solo enviamos fechas
       const response = await fetch(`${API_URL}/api/calculate-price`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          checkIn: formatDateLocal(checkInDate),
-          checkOut: formatDateLocal(checkOutDate),
-        }),
+        body: JSON.stringify({ nights, pricePerNight: PRICE_PER_NIGHT }),
       });
 
       if (response.ok) {
         const pricing = await response.json();
-        const cleaningRow =
-          pricing.cleaning_fee > 0
-            ? `
-              <div class="price-row">
-                <span>Cleaning fee:</span>
-                <span>$${pricing.cleaning_fee.toFixed(2)}</span>
-              </div>`
-            : "";
         if (priceDisplay) {
           priceDisplay.innerHTML = `
             <div class="price-breakdown">
               <div class="price-row">
                 <span>Nightly rate × ${nights} nights:</span>
                 <span>$${pricing.subtotal.toFixed(2)}</span>
-              </div>${cleaningRow}
+              </div>
               <div class="price-row tax-row">
-                <span>Mecklenburg Sales Tax (${pricing.tax_rates.mecklenburg_sales.toFixed(2)}%):</span>
+                <span>Mecklenburg Sales Tax (${((pricing.mecklenburg_sales_tax / pricing.subtotal) * 100).toFixed(2)}%):</span>
                 <span>$${pricing.mecklenburg_sales_tax.toFixed(2)}</span>
               </div>
               <div class="price-row tax-row">
-                <span>Mecklenburg Occupancy Tax (${pricing.tax_rates.mecklenburg_occupancy.toFixed(2)}%):</span>
+                <span>Mecklenburg Occupancy Tax (${((pricing.mecklenburg_occupancy_tax / pricing.subtotal) * 100).toFixed(2)}%):</span>
                 <span>$${pricing.mecklenburg_occupancy_tax.toFixed(2)}</span>
               </div>
               <div class="price-row total-row">
@@ -316,14 +286,10 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("confirm-checkin").textContent = checkIn;
     document.getElementById("confirm-checkout").textContent = checkOut;
     document.getElementById("confirm-nights").textContent = nights;
-    document.getElementById("confirm-base").textContent =
-      `$${pricing.subtotal.toFixed(2)}`;
-    document.getElementById("confirm-meck-sales").textContent =
-      `$${pricing.mecklenburg_sales_tax.toFixed(2)}`;
-    document.getElementById("confirm-meck-occupancy").textContent =
-      `$${pricing.mecklenburg_occupancy_tax.toFixed(2)}`;
-    document.getElementById("confirm-total").textContent =
-      `$${pricing.total.toFixed(2)}`;
+    document.getElementById("confirm-base").textContent = `$${pricing.subtotal.toFixed(2)}`;
+    document.getElementById("confirm-meck-sales").textContent = `$${pricing.mecklenburg_sales_tax.toFixed(2)}`;
+    document.getElementById("confirm-meck-occupancy").textContent = `$${pricing.mecklenburg_occupancy_tax.toFixed(2)}`;
+    document.getElementById("confirm-total").textContent = `$${pricing.total.toFixed(2)}`;
 
     confirmModal.classList.add("show");
 
@@ -334,12 +300,8 @@ document.addEventListener("DOMContentLoaded", () => {
         confirmAcceptBtn.removeEventListener("click", onAccept);
         resolve(result);
       }
-      function onCancel() {
-        cleanup(false);
-      }
-      function onAccept() {
-        cleanup(true);
-      }
+      function onCancel() { cleanup(false); }
+      function onAccept() { cleanup(true); }
       confirmCancelBtn.addEventListener("click", onCancel);
       confirmAcceptBtn.addEventListener("click", onAccept);
     });
@@ -380,6 +342,7 @@ document.addEventListener("DOMContentLoaded", () => {
           body: JSON.stringify({
             rental_type: "monthly",
             months,
+            monthly_rate: MONTHLY_RATE,
           }),
         });
 
@@ -389,16 +352,11 @@ document.addEventListener("DOMContentLoaded", () => {
         // Mostrar confirmación adaptada para mensual
         document.getElementById("confirm-checkin").textContent = checkIn;
         document.getElementById("confirm-checkout").textContent = checkOut;
-        document.getElementById("confirm-nights").textContent =
-          `${months} month(s)`;
-        document.getElementById("confirm-base").textContent =
-          `$${pricing.subtotal.toFixed(2)}`;
-        document.getElementById("confirm-meck-sales").textContent =
-          `$${pricing.mecklenburg_sales_tax.toFixed(2)}`;
-        document.getElementById("confirm-meck-occupancy").textContent =
-          `$0.00 (N/A)`;
-        document.getElementById("confirm-total").textContent =
-          `$${pricing.total.toFixed(2)}`;
+        document.getElementById("confirm-nights").textContent = `${months} month(s)`;
+        document.getElementById("confirm-base").textContent = `$${pricing.subtotal.toFixed(2)}`;
+        document.getElementById("confirm-meck-sales").textContent = `$${pricing.mecklenburg_sales_tax.toFixed(2)}`;
+        document.getElementById("confirm-meck-occupancy").textContent = `$0.00 (N/A)`;
+        document.getElementById("confirm-total").textContent = `$${pricing.total.toFixed(2)}`;
         confirmModal.classList.add("show");
 
         const confirmed = await new Promise((resolve) => {
@@ -408,12 +366,8 @@ document.addEventListener("DOMContentLoaded", () => {
             confirmAcceptBtn.removeEventListener("click", onAccept);
             resolve(result);
           }
-          function onCancel() {
-            cleanup(false);
-          }
-          function onAccept() {
-            cleanup(true);
-          }
+          function onCancel() { cleanup(false); }
+          function onAccept() { cleanup(true); }
           confirmCancelBtn.addEventListener("click", onCancel);
           confirmAcceptBtn.addEventListener("click", onAccept);
         });
@@ -426,25 +380,21 @@ document.addEventListener("DOMContentLoaded", () => {
         bookingMessage.textContent = "Preparing secure payment... Please wait.";
         bookingMessage.className = "booking-message";
 
-        const sessionResponse = await fetch(
-          `${API_URL}/api/create-checkout-session`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              rental_type: "monthly",
-              checkIn,
-              months,
-              guests: guestsSelect ? parseInt(guestsSelect.value) : 2,
-            }),
-          },
-        );
+        const sessionResponse = await fetch(`${API_URL}/api/create-checkout-session`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            rental_type: "monthly",
+            checkIn,
+            checkOut,
+            months,
+            monthly_rate: MONTHLY_RATE,
+          }),
+        });
 
         if (!sessionResponse.ok) {
           const errorData = await sessionResponse.json();
-          throw new Error(
-            errorData.error || "Failed to create payment session",
-          );
+          throw new Error(errorData.error || "Failed to create payment session");
         }
 
         const session = await sessionResponse.json();
@@ -463,8 +413,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const checkOutDate = checkoutPicker.selectedDates[0];
 
         if (!checkInDate || !checkOutDate) {
-          bookingMessage.textContent =
-            "Please select both check-in and check-out dates.";
+          bookingMessage.textContent = "Please select both check-in and check-out dates.";
           bookingMessage.className = "booking-message error";
           return;
         }
@@ -473,15 +422,12 @@ document.addEventListener("DOMContentLoaded", () => {
         const checkOut = formatDateLocal(checkOutDate);
 
         if (new Date(checkOut) <= new Date(checkIn)) {
-          bookingMessage.textContent =
-            "Check-out date must be after check-in date.";
+          bookingMessage.textContent = "Check-out date must be after check-in date.";
           bookingMessage.className = "booking-message error";
           return;
         }
 
-        const nights = Math.round(
-          (checkOutDate - checkInDate) / (1000 * 60 * 60 * 24),
-        );
+        const nights = Math.round((checkOutDate - checkInDate) / (1000 * 60 * 60 * 24));
 
         if (nights < MIN_NIGHTS) {
           bookingMessage.textContent = `Minimum stay is ${MIN_NIGHTS} nights. Please select a longer period.`;
@@ -493,8 +439,7 @@ document.addEventListener("DOMContentLoaded", () => {
         await fetchBookedDates();
 
         if (!isRangeAvailable(checkInDate, checkOutDate)) {
-          bookingMessage.textContent =
-            "One or more dates in this range are no longer available. Please select different dates.";
+          bookingMessage.textContent = "One or more dates in this range are no longer available. Please select different dates.";
           bookingMessage.className = "booking-message error";
           return;
         }
@@ -505,18 +450,13 @@ document.addEventListener("DOMContentLoaded", () => {
         const priceResponse = await fetch(`${API_URL}/api/calculate-price`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ checkIn, checkOut }),
+          body: JSON.stringify({ nights, pricePerNight: PRICE_PER_NIGHT }),
         });
 
         if (!priceResponse.ok) throw new Error("Failed to calculate price");
         const pricing = await priceResponse.json();
 
-        const confirmed = await showBookingConfirmation({
-          checkIn,
-          checkOut,
-          nights,
-          pricing,
-        });
+        const confirmed = await showBookingConfirmation({ checkIn, checkOut, nights, pricing });
         if (!confirmed) {
           bookingMessage.textContent = "";
           return;
@@ -525,24 +465,15 @@ document.addEventListener("DOMContentLoaded", () => {
         bookingMessage.textContent = "Preparing secure payment... Please wait.";
         bookingMessage.className = "booking-message";
 
-        const sessionResponse = await fetch(
-          `${API_URL}/api/create-checkout-session`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              checkIn,
-              checkOut,
-              guests: guestsSelect ? parseInt(guestsSelect.value) : 2,
-            }),
-          },
-        );
+        const sessionResponse = await fetch(`${API_URL}/api/create-checkout-session`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ checkIn, checkOut, nights, pricePerNight: PRICE_PER_NIGHT }),
+        });
 
         if (!sessionResponse.ok) {
           const errorData = await sessionResponse.json();
-          throw new Error(
-            errorData.error || "Failed to create payment session",
-          );
+          throw new Error(errorData.error || "Failed to create payment session");
         }
 
         const session = await sessionResponse.json();
