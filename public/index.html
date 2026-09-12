@@ -3,7 +3,94 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Lakeside Serenity in Davidson | Modern 2-Bedroom Rental</title>
+    <title>
+      Lakeside Serenity in Davidson | Modern 2-Bedroom Rental on Lake Norman
+    </title>
+
+    <!-- ===== SEO ===== -->
+    <!-- TODO: reemplazar https://www.escapelakenorman.com por el dominio real de Netlify -->
+    <meta
+      name="description"
+      content="Book direct and save: modern 2-bedroom, 2-bathroom lakeside apartment in Davidson, NC on Lake Norman. Lake view deck, Wi-Fi, washer & dryer. 20 min from Charlotte. Short stays (10+ nights) and monthly rentals."
+    />
+    <link rel="canonical" href="https://www.escapelakenorman.com/" />
+    <meta name="robots" content="index, follow" />
+
+    <!-- Open Graph (Facebook, WhatsApp, LinkedIn) -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Lakeside Serenity" />
+    <meta
+      property="og:title"
+      content="Lakeside Serenity in Davidson | Lake Norman Vacation Rental"
+    />
+    <meta
+      property="og:description"
+      content="Modern 2-bedroom, 2-bathroom lakeside apartment on Lake Norman. Book direct with secure Stripe payment. Short stays and monthly rentals."
+    />
+    <meta property="og:url" content="https://www.escapelakenorman.com/" />
+    <meta
+      property="og:image"
+      content="https://www.escapelakenorman.com/images/17.jpg"
+    />
+    <meta property="og:locale" content="en_US" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta
+      name="twitter:title"
+      content="Lakeside Serenity in Davidson | Lake Norman Vacation Rental"
+    />
+    <meta
+      name="twitter:description"
+      content="Modern 2-bedroom, 2-bathroom lakeside apartment on Lake Norman. Book direct and save."
+    />
+    <meta
+      name="twitter:image"
+      content="https://www.escapelakenorman.com/images/17.jpg"
+    />
+
+    <!-- Datos estructurados: ayudan a Google a mostrar rich results del alquiler -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "LodgingBusiness",
+        "name": "Lakeside Serenity",
+        "description": "Modern 2-bedroom, 2-bathroom lakeside apartment in Davidson, NC on Lake Norman. Lake view deck, high-speed Wi-Fi, washer & dryer, free on-site parking.",
+        "url": "https://www.escapelakenorman.com/",
+        "image": "https://www.escapelakenorman.com/images/17.jpg",
+        "priceRange": "$150/night",
+        "address": {
+          "@type": "PostalAddress",
+          "addressLocality": "Davidson",
+          "addressRegion": "NC",
+          "addressCountry": "US"
+        },
+        "geo": {
+          "@type": "GeoCoordinates",
+          "latitude": 35.5039462,
+          "longitude": -80.8690774
+        },
+        "amenityFeature": [
+          { "@type": "LocationFeatureSpecification", "name": "Lake View Deck" },
+          {
+            "@type": "LocationFeatureSpecification",
+            "name": "High-Speed Wi-Fi"
+          },
+          {
+            "@type": "LocationFeatureSpecification",
+            "name": "Air Conditioning"
+          },
+          {
+            "@type": "LocationFeatureSpecification",
+            "name": "Free On-site Parking"
+          },
+          { "@type": "LocationFeatureSpecification", "name": "Washer & Dryer" },
+          { "@type": "LocationFeatureSpecification", "name": "Smart TV" }
+        ],
+        "numberOfRooms": 2,
+        "petsAllowed": false
+      }
+    </script>
 
     <!-- FAVICON -->
     <link rel="icon" type="image/png" href="images/lake_favicon.png" />
@@ -424,7 +511,7 @@
               </div>
 
               <!-- Guests -->
-              <div class="form-group">
+              <div class="form-group guests-group">
                 <label for="guests">
                   <i class="fas fa-user-friends"></i> Guests
                 </label>

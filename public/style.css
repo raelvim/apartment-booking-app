@@ -505,21 +505,8 @@ nav a:hover::after {
   box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
 }
 
-/* Monthly select styling */
-#monthly-duration {
-  padding: 12px 15px;
-  border: 2px solid #e0e0e0;
-  border-radius: 6px;
-  font-size: 16px;
-  background: white;
-  width: 100%;
-  cursor: pointer;
-}
-
-#monthly-duration:focus {
-  outline: none;
-  border-color: #667eea;
-}
+/* El selector de duración mensual usa la regla general
+   .booking-card .form-group select (mismo estilo que Guests) */
 
 .date-legend {
   display: flex;
@@ -554,6 +541,29 @@ nav a:hover::after {
   outline: none;
   border-color: var(--color-primary);
   box-shadow: 0 0 0 3px rgba(106, 218, 238, 0.2);
+}
+
+/* Selectores (Guests y Duración mensual): mismo look que los campos de fecha */
+.booking-card .form-group select {
+  padding: 12px;
+  border: 2px solid #e0e0e0;
+  border-radius: 6px;
+  font-size: 16px;
+  background: white;
+  width: 100%;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.booking-card .form-group select:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(106, 218, 238, 0.2);
+}
+
+/* Separación entre el selector de huéspedes y el botón de pago */
+.guests-group {
+  margin-bottom: 30px;
 }
 
 .price-display {
