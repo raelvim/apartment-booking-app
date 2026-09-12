@@ -1,5 +1,4 @@
 # robots.txt - Lakeside Serenity
-# TODO: reemplazar el dominio por el dominio real de Netlify
 User-agent: *
 Allow: /
 
@@ -8,4 +7,4 @@ Disallow: /admin.html
 Disallow: /login.html
 Disallow: /tax-settings.html
 
-Sitemap: https://www.escapelakenorman.com/sitemap.xml
+Sitemap: https://escapelakenorman.com/sitemap.xml
