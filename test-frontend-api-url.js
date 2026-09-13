@@ -2,6 +2,7 @@
 // Uso: node test-frontend-api-url.js
 const fs = require("fs");
 const path = require("path");
+const vm = require("vm");
 
 const EXPECTED_PROD = "https://escapelakenorman-api-l2da.onrender.com";
 
@@ -19,19 +20,32 @@ for (const rel of files) {
   const abs = path.join(__dirname, rel);
   const content = fs.readFileSync(abs, "utf8");
 
-  const prodMatch = content.match(/const\s+PROD_API_URL\s*=\s*"([^"]+)"/);
-  const currentProdUrl = prodMatch ? prodMatch[1] : null;
+  const prodMatch = content.match(/const\s+PROD_API_URL\s*=\s*(["'`])([^"'`]+)\1/);
+  const currentProdUrl = prodMatch ? prodMatch[2] : null;
+  const apiExprMatch = content.match(/const\s+API_URL\s*=\s*([\s\S]*?);/);
+  const apiExpr = apiExprMatch ? apiExprMatch[1].trim() : null;
   const renderUrls = [...content.matchAll(/https:\/\/[a-z0-9-]+\.onrender\.com/g)].map(
     (m) => m[0],
   );
   const hasExpected = currentProdUrl === EXPECTED_PROD;
   const hasUnexpectedRenderUrl = renderUrls.some((url) => url !== EXPECTED_PROD);
-  const keepsLocalhost =
-    /localhost/.test(content) &&
-    /127\.0\.0\.1/.test(content) &&
-    /window\.location\.hostname/.test(content) &&
-    /`http:\/\/\$\{window\.location\.hostname\}:3001`/.test(content) &&
-    /:\s*PROD_API_URL/.test(content);
+  let keepsLocalhost = false;
+
+  if (apiExpr && currentProdUrl) {
+    const resolveApiUrl = (hostname) =>
+      vm.runInNewContext(
+        `(() => {
+          const PROD_API_URL = ${JSON.stringify(currentProdUrl)};
+          const window = { location: { hostname: ${JSON.stringify(hostname)} } };
+          return (${apiExpr});
+        })()`,
+      );
+
+    keepsLocalhost =
+      resolveApiUrl("localhost") === "http://localhost:3001" &&
+      resolveApiUrl("127.0.0.1") === "http://127.0.0.1:3001" &&
+      resolveApiUrl("example.com") === EXPECTED_PROD;
+  }
 
   if (!hasExpected || hasUnexpectedRenderUrl || !keepsLocalhost) {
     failed += 1;
