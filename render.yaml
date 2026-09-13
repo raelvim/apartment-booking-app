@@ -5,8 +5,8 @@
 #   2. En Render: New > Blueprint > conecta el repo.
 #   3. Render pedirá rellenar las variables marcadas con sync: false
 #      (las secretas: contraseña de admin, claves de Stripe, etc.).
-#   4. Deploy. La URL resultante será algo como
-#      https://escapelakenorman-api.onrender.com (ya configurada en el frontend).
+#   4. Deploy. La URL resultante es
+#      https://escapelakenorman-api-l2da.onrender.com (ya configurada en el frontend).
 #
 # IMPORTANTE (SQLite): este servicio usa reservations.db en disco. En el plan
 # gratuito el disco es EFÍMERO (se borra en cada redeploy/restart). El disco
@@ -15,7 +15,7 @@
 
 services:
   - type: web
-    name: escapelakenorman-api
+    name: escapelakenorman-api-l2da
     runtime: node
     plan: free
     buildCommand: npm install
