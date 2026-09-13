@@ -492,9 +492,7 @@
 
           tr.innerHTML = `
                 <td>${booking.id}</td>
-                <td>${new Date(booking.checkIn).toLocaleDateString(
-                  "en-US",
-                )}</td>
+                <td>${checkOutDate.toLocaleDateString("en-US")}</td>
                 <td>${new Date(booking.checkOut).toLocaleDateString(
                   "en-US",
                 )}</td>
