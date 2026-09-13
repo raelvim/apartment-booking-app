@@ -18,6 +18,23 @@ The process is intentionally lighter than CORNER because this is a software appl
 
 No separate prose approval document is required for every change.
 
+## Absolute main-branch rule
+
+No AI agent may merge, squash, rebase, fast-forward, force-update, or directly write code to `main` without a separate, explicit Repository Owner instruction for the exact PR/change being merged.
+
+The following do **not** count as merge authorization:
+
+- “solve it”;
+- “fix it”;
+- “go ahead”;
+- “continue”;
+- “finish the issue”;
+- “approve the fix”;
+- approval to create a branch or PR;
+- approval to run tests or QA.
+
+Those instructions authorize work only through the review/approval stages on the issue branch. Merge authorization must explicitly identify that the approved PR/change may be merged to `main`.
+
 ## Roles
 
 ### Repository Owner
@@ -25,7 +42,7 @@ No separate prose approval document is required for every change.
 Final authority for:
 
 - accepting high-risk changes;
-- authorizing merges to `main` when owner approval is required;
+- authorizing every merge to `main`;
 - authorizing production deployment;
 - approving destructive data operations, secret changes, or irreversible migrations.
 
@@ -53,7 +70,7 @@ A specialist implements only within the accepted issue scope unless the Lead exp
 
 The normal chain is:
 
-`ISSUE_CREATED → ISSUE_ACCEPTED → AGENT_ASSIGNED → BRANCH_CREATED → IMPLEMENTATION_IN_PROGRESS → RESULT_SUBMITTED → QA_CONFORM → LEAD_APPROVED → OWNER_APPROVED → MERGED → DEPLOYMENT_DECIDED → DEPLOYED → VERIFIED → CLOSED`
+`ISSUE_CREATED → ISSUE_ACCEPTED → AGENT_ASSIGNED → BRANCH_CREATED → IMPLEMENTATION_IN_PROGRESS → RESULT_SUBMITTED → QA_CONFORM → LEAD_APPROVED → OWNER_APPROVED → MERGE_AUTHORIZED → MERGED → DEPLOYMENT_DECIDED → DEPLOYED → VERIFIED → CLOSED`
 
 For changes that do not require a production deployment, `DEPLOYMENT_DECIDED` must explicitly record `NOT_REQUIRED`; they then proceed directly to `VERIFIED` using repository/CI verification rather than runtime verification.
 
@@ -187,7 +204,9 @@ If the branch head changes after approval, approval must be revalidated when the
 
 **Actor:** Repository Owner.
 
-Required before merge for:
+`OWNER_APPROVED` means the Owner accepts the technical result/review state for the exact PR/head SHA. It is **not** permission to merge.
+
+Required before the next transition for:
 
 - P0 issues;
 - payment behavior changes;
@@ -197,13 +216,32 @@ Required before merge for:
 - destructive operations;
 - any change the Lead explicitly escalates.
 
-For low-risk P1/P2 fixes, the Owner may grant standing approval to the Lead for a defined category. Such standing approval must be recorded before use.
+For low-risk P1/P2 fixes, the Owner may grant standing review approval to the Lead for a defined category. Such standing approval must be recorded before use, but it still does not authorize merges to `main`.
 
-Silence is not approval.
+Silence is not approval, and implementation instructions are not approval.
 
-### 10. MERGED
+### 10. MERGE_AUTHORIZED
 
-**Actor:** Lead Integrator or Repository Owner.
+**Actor:** Repository Owner only.
+
+This is a distinct blocking transition.
+
+Required evidence:
+
+- explicit instruction that the exact PR/change may be merged to `main`;
+- PR number or unambiguous change identity;
+- expected head SHA when available.
+
+Examples of valid authorization:
+
+- “Merge PR #12 to main.”
+- “You may merge issue #3 PR to main now.”
+
+Anything less explicit does not satisfy this state.
+
+### 11. MERGED
+
+**Actor:** Lead Integrator or Repository Owner, but only after `MERGE_AUTHORIZED`.
 
 Preconditions:
 
@@ -211,13 +249,14 @@ Preconditions:
 - required CI checks green;
 - correct base branch;
 - expected head SHA confirmed;
-- required reviews complete.
+- required reviews complete;
+- explicit `MERGE_AUTHORIZED` evidence from the Repository Owner.
 
-Specialist agents do not merge their own work unless explicitly authorized.
+Specialist agents do not merge their own work.
 
 The merged commit or squash SHA becomes the release evidence for that issue.
 
-### 11. DEPLOYMENT_DECIDED
+### 12. DEPLOYMENT_DECIDED
 
 **Actor:** Lead Integrator, with Owner authority when production-impacting.
 
@@ -229,7 +268,7 @@ Record one of:
 
 `NOT_REQUIRED` is appropriate for documentation-only or repository-only changes that cannot affect runtime behavior.
 
-### 12. DEPLOYED
+### 13. DEPLOYED
 
 **Actor:** Lead Integrator, deployment agent, or Repository Owner with deployment authority.
 
@@ -242,7 +281,7 @@ Required evidence when deployment is required:
 
 A successful Git merge is not proof of a successful deployment.
 
-### 13. VERIFIED
+### 14. VERIFIED
 
 **Actor:** QA agent or Lead Integrator, independent from the deployment action when practical.
 
@@ -261,7 +300,7 @@ Verification may include:
 
 For `DEPLOYMENT_DECIDED=NOT_REQUIRED`, verification means confirming the merged repository state and required CI/review evidence.
 
-### 14. CLOSED
+### 15. CLOSED
 
 **Actor:** Lead Integrator or Repository Owner.
 
@@ -287,11 +326,12 @@ The following conditions block forward transition:
 9. Missing migration/rollback plan for a destructive or stateful DB change.
 10. Branch head materially changed after QA/approval without revalidation.
 11. Merge conflicts or dependency conflicts.
-12. Production deployment requested without required Owner authorization.
-13. Deployment outcome unknown.
-14. Verification performed against a different commit/environment than the deployed target.
+12. Missing explicit Repository Owner `MERGE_AUTHORIZED` instruction for `main`.
+13. Production deployment requested without required Owner authorization.
+14. Deployment outcome unknown.
+15. Verification performed against a different commit/environment than the deployed target.
 
-Evidence added after an unauthorized action does not retroactively make the action compliant. The correct response is to record the deviation, stop, and let the Lead determine recovery.
+Evidence added after an unauthorized action does not retroactively make the action compliant. The correct response is to record the deviation, stop, and let the Owner/Lead determine recovery.
 
 ## Concurrency rules
 
@@ -319,7 +359,11 @@ Record the failure, correct the branch, rerun relevant tests, and obtain a new `
 
 ### Merge blocked
 
-Resolve conflicts on the issue branch, rerun relevant checks, and revalidate approvals if the resulting diff materially changed.
+Resolve conflicts on the issue branch, rerun relevant checks, and revalidate approvals if the resulting diff materially changed. Do not merge until the Owner issues a fresh or still-applicable `MERGE_AUTHORIZED` instruction.
+
+### Unauthorized merge
+
+Stop immediately. Record the deviation. Do not attempt another direct write to `main` to repair it without Owner authorization. Prepare a separate revert branch/PR and wait for explicit Owner authorization before merging the rollback.
 
 ### Deployment failed with known failure
 
@@ -331,7 +375,7 @@ Do not redeploy blindly. First reconcile the deployment platform and identify wh
 
 ### Production regression
 
-Create or reopen a GitHub issue immediately. The Lead decides whether to rollback or issue a forward fix. Payment/data integrity regressions are P0 until proven otherwise.
+Create or reopen a GitHub issue immediately. The Lead decides whether to prepare a rollback or forward fix. Execution of either into `main` still requires explicit Owner merge authorization.
 
 ## Canonical evidence format
 
@@ -359,7 +403,7 @@ The recorded SHA matters: evidence for one revision does not automatically valid
 
 Normal implementation handoff:
 
-`Specialist → QA → Lead Integrator → Repository Owner when required → Merge/Deployment actor → QA/Lead verification`
+`Specialist → QA → Lead Integrator → Repository Owner review → explicit MERGE_AUTHORIZED → Merge/Deployment actor → QA/Lead verification`
 
 No handoff transfers responsibility for facts that have not been verified.
 
