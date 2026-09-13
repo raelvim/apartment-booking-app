@@ -4,7 +4,6 @@ const fs = require("fs");
 const path = require("path");
 
 const EXPECTED_PROD = "https://escapelakenorman-api-l2da.onrender.com";
-const OLD_PROD = "https://escapelakenorman-api.onrender.com";
 
 const files = [
   "public/booking.js",
@@ -20,17 +19,28 @@ for (const rel of files) {
   const abs = path.join(__dirname, rel);
   const content = fs.readFileSync(abs, "utf8");
 
-  const hasExpected = content.includes(EXPECTED_PROD);
-  const hasOld = content.includes(OLD_PROD);
+  const prodMatch = content.match(/const\s+PROD_API_URL\s*=\s*"([^"]+)"/);
+  const currentProdUrl = prodMatch ? prodMatch[1] : null;
+  const renderUrls = [...content.matchAll(/https:\/\/[a-z0-9-]+\.onrender\.com/g)].map(
+    (m) => m[0],
+  );
+  const hasExpected = currentProdUrl === EXPECTED_PROD;
+  const hasUnexpectedRenderUrl = renderUrls.some((url) => url !== EXPECTED_PROD);
   const keepsLocalhost =
-    content.includes('"localhost", "127.0.0.1"') &&
-    content.includes(":3001");
+    /localhost/.test(content) &&
+    /127\.0\.0\.1/.test(content) &&
+    /window\.location\.hostname/.test(content) &&
+    /`http:\/\/\$\{window\.location\.hostname\}:3001`/.test(content) &&
+    /:\s*PROD_API_URL/.test(content);
 
-  if (!hasExpected || hasOld || !keepsLocalhost) {
+  if (!hasExpected || hasUnexpectedRenderUrl || !keepsLocalhost) {
     failed += 1;
     console.log(`❌ ${rel}`);
     if (!hasExpected) console.log(`   - Missing expected URL: ${EXPECTED_PROD}`);
-    if (hasOld) console.log(`   - Still contains old URL: ${OLD_PROD}`);
+    if (hasUnexpectedRenderUrl)
+      console.log(
+        `   - Unexpected Render URL(s): ${renderUrls.filter((url) => url !== EXPECTED_PROD).join(", ")}`,
+      );
     if (!keepsLocalhost)
       console.log("   - Localhost/development fallback check failed");
   } else {
