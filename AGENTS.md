@@ -10,6 +10,14 @@
 >
 > No AI agent may merge, squash, rebase, fast-forward, force-update, or directly write code to `main` unless the Repository Owner gives an explicit merge instruction for the specific PR/change. Instructions such as “solve it,” “fix it,” “go ahead,” “continue,” “approve the fix,” or “finish the issue” authorize work on the issue branch only; they do **not** authorize a merge to `main`.
 
+> **PR CODE OWNERSHIP RULE**
+>
+> All implementation code in every PR is the responsibility of the approved project specialist team. GitHub Copilot is not a project implementer and may not own the final code of a PR.
+>
+> Copilot may provide an optional initial seed commit, but the assigned specialist agent must then inspect, adopt/correct/replace it, run the required checks, and own the final branch head and `RESULT_SUBMITTED` evidence.
+>
+> After the team implementation is ready, Copilot acts as an independent reviewer only. The team must address or disposition Copilot findings. **Raelvi (`raelvim`) has the final technical review word on every code PR.** Only after Raelvi approves the exact final head may the PR proceed to Repository Owner merge authorization.
+
 This repository uses a small specialist-agent team inspired by the CORNER collaboration model.
 
 For work containing two or more independent technical tasks, the Lead Integrator should delegate in parallel when useful to the relevant specialist agents:
@@ -28,15 +36,15 @@ All implementation work must follow [`DEVELOPMENT_PROCESS.md`](DEVELOPMENT_PROCE
 
 As in CORNER, a conversation instruction does not permit an agent to skip a required transition. GitHub provides the canonical process evidence for this project: issue, branch, commits, pull request, CI, reviews, merge and deployment verification.
 
-The blocking process chain is:
+The blocking process chain for code PRs is:
 
-`ISSUE_CREATED → ISSUE_ACCEPTED → AGENT_ASSIGNED → BRANCH_CREATED → IMPLEMENTATION_IN_PROGRESS → RESULT_SUBMITTED → QA_CONFORM → LEAD_APPROVED → OWNER_APPROVED → MERGED → DEPLOYMENT_DECIDED → DEPLOYED → VERIFIED → CLOSED`
+`ISSUE_CREATED → ISSUE_ACCEPTED → AGENT_ASSIGNED → BRANCH_CREATED → IMPLEMENTATION_IN_PROGRESS → RESULT_SUBMITTED → QA_CONFORM → COPILOT_REVIEWED → RAELVI_APPROVED → LEAD_APPROVED → OWNER_APPROVED → MERGE_AUTHORIZED → MERGED → DEPLOYMENT_DECIDED → DEPLOYED → VERIFIED → CLOSED`
 
 When deployment is not applicable, `DEPLOYMENT_DECIDED` must explicitly record `NOT_REQUIRED`; the change still requires repository/CI verification before closure.
 
 Rules:
 
-1. One issue maps to one primary branch and one primary pull request.
+1. One issue maps to one primary team-owned branch and one primary team-owned pull request.
 2. Every branch must identify the issue it fixes.
 3. Every transition requires the previous valid state and current evidence.
 4. Evidence belongs to the exact branch/commit SHA being reviewed; materially changed code requires revalidation.
@@ -52,6 +60,10 @@ Rules:
 14. Specialist agents do not merge their own work unless explicitly authorized.
 15. `OWNER_APPROVED` is not inferred from implementation instructions. It must be an explicit approval record for the exact PR/head SHA.
 16. `MERGED` requires a separate explicit owner instruction to merge that exact PR/change into `main`; approval to implement or review is insufficient.
+17. Copilot cannot transition an issue to `RESULT_SUBMITTED`, `QA_CONFORM`, `LEAD_APPROVED`, or any ownership state. Its normal authority is review only after team implementation.
+18. A Copilot seed commit is non-authoritative until a designated team specialist takes responsibility for the resulting code and final head.
+19. A code PR cannot reach final technical approval without Raelvi's explicit review of the exact final head SHA.
+20. A material code change after Copilot review or Raelvi approval invalidates that review and requires a new review against the new head.
 
 ## Agent definitions
 
@@ -60,10 +72,20 @@ Rules:
 - `agents/AGT-WEB-001-FRONTEND-SECURITY.md`
 - `agents/AGT-QA-001-TESTING-ARCHITECTURE.md`
 
+## Review roles outside the implementation team
+
+### GitHub Copilot
+
+Reviewer role. May optionally provide a seed commit when explicitly useful, but may not remain the implementation owner. Reviews the team-owned final candidate and reports findings before Raelvi's final technical review.
+
+### Raelvi (`raelvim`)
+
+Final technical reviewer for every code PR. Raelvi's approval is required after Copilot review and after all material code changes are complete. Raelvi does not authorize merge to `main`; that remains the Repository Owner's authority.
+
 ## Current issue ownership
 
 - Database & Payments: issues #1, #2, #5.
-- Frontend & Security: issues #3, #4, #6.
+- Frontend & Security: issues #3, #4, #6, #17.
 - Testing & Architecture: issues #7, #8, #9.
 - Lead Integrator: coordinates all issues and owns integration decisions.
 
