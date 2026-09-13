@@ -6,6 +6,10 @@
 >
 > Required startup order: `BUILD_VERIFICATION.md → AGENTS.md → DEVELOPMENT_PROCESS.md → assigned role file → exact GitHub issue/branch evidence → implementation files`.
 
+> **ABSOLUTE MAIN-BRANCH RULE**
+>
+> No AI agent may merge, squash, rebase, fast-forward, force-update, or directly write code to `main` unless the Repository Owner gives an explicit merge instruction for the specific PR/change. Instructions such as “solve it,” “fix it,” “go ahead,” “continue,” “approve the fix,” or “finish the issue” authorize work on the issue branch only; they do **not** authorize a merge to `main`.
+
 This repository uses a small specialist-agent team inspired by the CORNER collaboration model.
 
 For work containing two or more independent technical tasks, the Lead Integrator should delegate in parallel when useful to the relevant specialist agents:
@@ -46,6 +50,8 @@ Rules:
 12. An issue is not complete until evidence is recorded: changed files, tests/checks performed, review result, deployment decision/result when applicable, known risks, and remaining follow-up.
 13. Evidence added after an unauthorized action does not retroactively authorize that action. Stop and escalate to the Lead Integrator.
 14. Specialist agents do not merge their own work unless explicitly authorized.
+15. `OWNER_APPROVED` is not inferred from implementation instructions. It must be an explicit approval record for the exact PR/head SHA.
+16. `MERGED` requires a separate explicit owner instruction to merge that exact PR/change into `main`; approval to implement or review is insufficient.
 
 ## Agent definitions
 
