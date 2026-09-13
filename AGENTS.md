@@ -1,5 +1,11 @@
 # Permanent Rule — Booking App Agent Collaboration
 
+> **MANDATORY BOOTSTRAP**
+>
+> Before inspecting or modifying implementation code, every AI coding/review agent must read [`BUILD_VERIFICATION.md`](BUILD_VERIFICATION.md). It is the repository's first technical entry file and defines the identity, baseline, build/test gate, required reading order, and blocking conditions.
+>
+> Required startup order: `BUILD_VERIFICATION.md → AGENTS.md → DEVELOPMENT_PROCESS.md → assigned role file → exact GitHub issue/branch evidence → implementation files`.
+
 This repository uses a small specialist-agent team inspired by the CORNER collaboration model.
 
 For work containing two or more independent technical tasks, the Lead Integrator should delegate in parallel when useful to the relevant specialist agents:
