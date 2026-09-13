@@ -36,11 +36,14 @@ services:
       - key: PORT
         value: 3001
 
-      # Frontend (Netlify): de aquí salen success.html / cancel.html
+      # Frontend (Netlify): de aquí salen success.html / cancel.html.
+      # DOMAIN es la versión "canónica" del sitio (a donde Stripe redirige).
       - key: DOMAIN
-        value: https://escapelakenorman.com
+        value: https://www.escapelakenorman.com
+      # CORS: lista separada por comas con TODOS los orígenes válidos
+      # (raíz y www, porque Netlify suele responder en ambos).
       - key: ALLOWED_ORIGINS
-        value: https://escapelakenorman.com
+        value: https://escapelakenorman.com,https://www.escapelakenorman.com
 
       # Seguridad: el servidor NO arranca sin estas dos (process.exit)
       - key: ADMIN_PASSWORD
