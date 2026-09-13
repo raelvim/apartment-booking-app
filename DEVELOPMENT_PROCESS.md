@@ -10,408 +10,242 @@ coordinator: AGT-LEAD-001
 
 ## Purpose
 
-This procedure applies the same core governance principle used by CORNER to the apartment booking application:
+GitHub is the canonical execution record for issues, branches, commits, PRs, reviews, merges, deployments, and verification.
 
-> An instruction in chat does not authorize skipping a required process transition. Each stage requires the previous stage, the correct actor, the same issue/branch identity, and current evidence.
+A chat instruction never skips a required gate. Evidence belongs to the exact issue, branch, and head SHA being evaluated.
 
-The process is intentionally lighter than CORNER because this is a software application, not a scientific publication workflow. GitHub itself is the canonical record: issue, branch, commits, pull request, CI checks, reviews, merge, and deployment evidence.
+## Non-negotiable ownership rules
 
-No separate prose approval document is required for every change.
-
-## Absolute main-branch rule
-
-No AI agent may merge, squash, rebase, fast-forward, force-update, or directly write code to `main` without a separate, explicit Repository Owner instruction for the exact PR/change being merged.
-
-The following do **not** count as merge authorization:
-
-- “solve it”;
-- “fix it”;
-- “go ahead”;
-- “continue”;
-- “finish the issue”;
-- “approve the fix”;
-- approval to create a branch or PR;
-- approval to run tests or QA.
-
-Those instructions authorize work only through the review/approval stages on the issue branch. Merge authorization must explicitly identify that the approved PR/change may be merged to `main`.
+1. **The principal assistant/coordinator does not write implementation code.**
+2. **All final implementation code in a PR is owned by the approved project team.**
+3. GitHub Copilot may provide an optional initial seed commit, but it is not the final implementer or PR owner.
+4. A designated team specialist must inspect/adopt/correct/replace any Copilot seed and take responsibility for the final branch head, tests, and implementation evidence.
+5. After team implementation/QA is ready, **Copilot reviews the team-owned candidate**.
+6. The team addresses or explicitly dispositions Copilot findings.
+7. **Raelvi (`raelvim`) gives the final technical review word on every code PR** against the exact final head SHA.
+8. **Only the Repository Owner can authorize merge to `main`.** Raelvi approval is technical approval, not merge authorization.
+9. No AI agent may merge, squash, rebase, fast-forward, force-update, or directly write code to `main` without a separate explicit Repository Owner instruction for that exact PR/change.
 
 ## Roles
 
 ### Repository Owner
 
-Final authority for:
-
-- accepting high-risk changes;
-- authorizing every merge to `main`;
-- authorizing production deployment;
-- approving destructive data operations, secret changes, or irreversible migrations.
+Final authority for merge authorization, production deployment authorization, destructive operations, secret changes, and irreversible migrations.
 
 ### AGT-LEAD-001 — Lead Integrator
 
-Responsible for:
+Coordinates issues, assigns specialists, checks scope/branch identity, controls integration readiness, verifies review gates, and stops unsafe or incomplete work.
 
-- accepting and classifying issues;
-- assigning specialist ownership;
-- ensuring branch/issue identity remains consistent;
-- reviewing cross-domain impact;
-- deciding merge order;
-- blocking incomplete or unsafe work;
-- confirming release readiness.
-
-### Specialist agents
+### Project-team specialists
 
 - `AGT-DATA-001` — Database & Payments
 - `AGT-WEB-001` — Frontend & Security
 - `AGT-QA-001` — Testing & Architecture
 
-A specialist implements only within the accepted issue scope unless the Lead explicitly extends or splits the issue.
+The assigned specialist owns the implementation result for its issue.
+
+### GitHub Copilot
+
+Independent reviewer after the team has produced a reviewable candidate. Copilot may optionally provide an initial seed commit, but may not own `RESULT_SUBMITTED`, QA, lead approval, or final implementation responsibility.
+
+### Raelvi (`raelvim`)
+
+Final technical reviewer for every code PR. Raelvi reviews only after team implementation, team QA, and Copilot review findings have been addressed. Material code changes after Raelvi approval require a new Raelvi review.
 
 ## Canonical process chain
 
-The normal chain is:
+For code changes:
 
-`ISSUE_CREATED → ISSUE_ACCEPTED → AGENT_ASSIGNED → BRANCH_CREATED → IMPLEMENTATION_IN_PROGRESS → RESULT_SUBMITTED → QA_CONFORM → LEAD_APPROVED → OWNER_APPROVED → MERGE_AUTHORIZED → MERGED → DEPLOYMENT_DECIDED → DEPLOYED → VERIFIED → CLOSED`
+`ISSUE_CREATED → ISSUE_ACCEPTED → AGENT_ASSIGNED → BRANCH_CREATED → IMPLEMENTATION_IN_PROGRESS → RESULT_SUBMITTED → QA_CONFORM → COPILOT_REVIEWED → RAELVI_APPROVED → LEAD_APPROVED → OWNER_APPROVED → MERGE_AUTHORIZED → MERGED → DEPLOYMENT_DECIDED → DEPLOYED → VERIFIED → CLOSED`
 
-For changes that do not require a production deployment, `DEPLOYMENT_DECIDED` must explicitly record `NOT_REQUIRED`; they then proceed directly to `VERIFIED` using repository/CI verification rather than runtime verification.
+For documentation-only or repository-only changes with no runtime effect, deployment may be recorded as `NOT_REQUIRED` before verification.
 
 No state may be silently skipped.
 
-## State definitions and transition rules
+## State rules
 
-### 1. ISSUE_CREATED
+### ISSUE_CREATED
 
-**Actor:** Repository Owner, Lead Integrator, or authorized agent.
+Requires a GitHub issue with problem, scope, acceptance criteria, and risk/priority when relevant.
 
-Required evidence:
+### ISSUE_ACCEPTED
 
-- GitHub issue number;
-- clear problem statement;
-- scope;
-- acceptance criteria;
-- priority/risk level when relevant.
+Lead confirms the issue is valid, scoped, non-duplicate, and testable.
 
-The issue number becomes the permanent identity of the work.
+### AGENT_ASSIGNED
 
-### 2. ISSUE_ACCEPTED
+Lead assigns the primary project-team specialist. Copilot is not the primary specialist.
 
-**Actor:** Lead Integrator.
+### BRANCH_CREATED
 
-The Lead confirms:
+One accepted issue maps to one primary team-owned branch. Normal name: `issue-<number>-<short-name>`. Record baseline SHA.
 
-- the issue is real and reproducible or otherwise justified;
-- scope is sufficiently clear;
-- acceptance criteria are testable;
-- duplicate or overlapping work has been checked;
-- dependencies on other issues are recorded.
+A Copilot branch/commit may be referenced as seed material, but the authoritative implementation branch remains team-owned.
 
-A specialist must not begin implementation before acceptance, except for read-only diagnosis needed to define the issue.
+### IMPLEMENTATION_IN_PROGRESS
 
-### 3. AGENT_ASSIGNED
+Assigned team specialist may modify only authorized scope, add/update tests, and produce evidence. Principal assistant does not code.
 
-**Actor:** Lead Integrator.
+If a Copilot seed exists, the team specialist must review it before adopting any of it.
 
-The Lead assigns the primary specialist based on domain ownership.
+### RESULT_SUBMITTED
 
-Cross-domain work may name secondary reviewers, but one agent remains the primary implementer.
-
-### 4. BRANCH_CREATED
-
-**Actor:** Assigned specialist or Lead Integrator.
-
-Rules:
-
-- one accepted issue maps to one primary branch;
-- branch names must identify the issue, normally `issue-<number>-<short-name>`;
-- the branch starts from the approved baseline, normally current `main`;
-- the baseline commit SHA must be knowable from Git history.
-
-A branch created from an unintended baseline blocks further work until corrected or explicitly accepted by the Lead.
-
-### 5. IMPLEMENTATION_IN_PROGRESS
-
-**Actor:** Assigned specialist.
-
-The specialist may:
-
-- modify files within issue scope;
-- add or update tests;
-- run local/static checks;
-- document migration or rollback requirements.
-
-The specialist must stop and escalate when discovering:
-
-- a production secret;
-- unexpected customer/private data;
-- destructive migration risk;
-- payment-integrity uncertainty;
-- a required change outside assigned authority;
-- a conflict with another active branch that can invalidate the work.
-
-### 6. RESULT_SUBMITTED
-
-**Actor:** Assigned specialist.
-
-The result is considered submitted only when there is auditable evidence.
+**Actor: assigned project-team specialist only.**
 
 Required evidence:
+- branch;
+- exact head SHA;
+- files changed;
+- checks/tests actually run and results;
+- known limitations;
+- migration/rollback notes where applicable;
+- confirmation that any Copilot seed was inspected and the team owns the resulting final code.
 
-- branch name;
-- current head commit SHA;
-- changed files or concise change summary;
-- tests/checks performed and their result;
-- known risks or limitations;
-- migration/rollback notes when applicable;
-- statement of any acceptance criterion not yet met.
+Copilot cannot submit this state.
 
-A specialist may not mark work complete merely because code was written.
+### QA_CONFORM
 
-### 7. QA_CONFORM
+**Actor: AGT-QA-001 or Lead-designated independent team reviewer.**
 
-**Actor:** AGT-QA-001, or another independent reviewer designated by the Lead.
+QA checks relevant tests/regressions, security/data/payment impact, CI, and absence of unrelated files. Failed or missing required tests return work to implementation.
 
-QA verifies as applicable:
+### COPILOT_REVIEWED
 
-- automated tests;
-- regression behavior;
-- security-impact checks;
-- booking availability rules;
-- payment idempotency;
-- database isolation/migration behavior;
-- frontend/admin behavior;
-- CI configuration;
-- absence of accidental unrelated files.
+Copilot reviews the exact team-owned candidate head. Findings must be captured in the PR.
 
-`QA_CONFORM` is forbidden when required tests are failing, missing, fake/no-op, or run against production/customer data.
+If Copilot identifies a valid issue, the team fixes it and reruns affected checks. Material changes require a new Copilot review.
 
-A failed QA review returns the work to `IMPLEMENTATION_IN_PROGRESS`; the failed evidence remains part of history.
+Copilot review does not replace team QA and does not approve merge.
 
-### 8. LEAD_APPROVED
+### RAELVI_APPROVED
 
-**Actor:** AGT-LEAD-001.
+**Actor: Raelvi (`raelvim`).**
 
-The Lead confirms:
+Raelvi reviews the exact final head after team QA and Copilot review. Raelvi has the final technical word for the PR.
 
-- issue scope and implementation still match;
-- QA evidence is current for the branch head;
-- no unresolved review comments remain;
-- dependencies and merge order are safe;
-- the PR does not silently include another issue;
-- production risk is understood.
+If Raelvi requests changes, the team returns to implementation. Any material code change invalidates the prior Raelvi approval and requires another final review.
 
-If the branch head changes after approval, approval must be revalidated when the change is material.
+### LEAD_APPROVED
 
-### 9. OWNER_APPROVED
+Lead confirms issue scope, current QA, Copilot review, Raelvi approval, dependencies, and merge readiness all refer to the same final head SHA.
 
-**Actor:** Repository Owner.
+### OWNER_APPROVED
 
-`OWNER_APPROVED` means the Owner accepts the technical result/review state for the exact PR/head SHA. It is **not** permission to merge.
+Repository Owner accepts the technical result for the exact PR/head. This is **not** permission to merge.
 
-Required before the next transition for:
+### MERGE_AUTHORIZED
 
-- P0 issues;
-- payment behavior changes;
-- database migrations affecting existing data;
-- authentication/authorization changes;
-- production infrastructure changes;
-- destructive operations;
-- any change the Lead explicitly escalates.
+**Actor: Repository Owner only.**
 
-For low-risk P1/P2 fixes, the Owner may grant standing review approval to the Lead for a defined category. Such standing approval must be recorded before use, but it still does not authorize merges to `main`.
+Requires a separate explicit instruction identifying the exact PR/change that may be merged to `main`, for example:
 
-Silence is not approval, and implementation instructions are not approval.
+- “Merge PR #25 to main.”
+- “You may merge the Issue #17 PR to main now.”
 
-### 10. MERGE_AUTHORIZED
+“Fix it,” “continue,” “approve,” “finish,” “solve it,” or approval to review/test do not count.
 
-**Actor:** Repository Owner only.
+### MERGED
 
-This is a distinct blocking transition.
+Only after all required prior gates and explicit `MERGE_AUTHORIZED`. Confirm expected head SHA and correct base.
 
-Required evidence:
+### DEPLOYMENT_DECIDED
 
-- explicit instruction that the exact PR/change may be merged to `main`;
-- PR number or unambiguous change identity;
-- expected head SHA when available.
+Record `REQUIRED`, `NOT_REQUIRED`, or `BLOCKED`.
 
-Examples of valid authorization:
+### DEPLOYED
 
-- “Merge PR #12 to main.”
-- “You may merge issue #3 PR to main now.”
+When required, record deployed SHA, target environment, result, and migration/config result as applicable. Merge is not deployment proof.
 
-Anything less explicit does not satisfy this state.
+### VERIFIED
 
-### 11. MERGED
+Runtime changes are verified against the deployed version. Repository-only changes are verified against merged state and CI/review evidence.
 
-**Actor:** Lead Integrator or Repository Owner, but only after `MERGE_AUTHORIZED`.
+### CLOSED
 
-Preconditions:
+Only after acceptance criteria and required verification are complete and follow-ups are either unnecessary or separate issues.
 
-- approved PR;
-- required CI checks green;
-- correct base branch;
-- expected head SHA confirmed;
-- required reviews complete;
-- explicit `MERGE_AUTHORIZED` evidence from the Repository Owner.
+## Blocking conditions
 
-Specialist agents do not merge their own work.
+Forward progress stops for any of the following:
 
-The merged commit or squash SHA becomes the release evidence for that issue.
+- wrong issue/branch/SHA;
+- no designated team specialist;
+- principal assistant would need to code;
+- Copilot is being treated as PR owner/final implementer;
+- team has not taken responsibility for a Copilot seed;
+- relevant tests fail or are misleading/no-op;
+- unresolved security/payment/data/persistence risk;
+- missing migration/rollback plan for stateful/destructive changes;
+- branch materially changed after QA/review without revalidation;
+- unresolved review comments;
+- missing Copilot review for a code PR;
+- missing Raelvi final technical approval for a code PR;
+- merge conflicts/dependency conflicts;
+- missing explicit Repository Owner merge authorization;
+- deployment outcome unknown;
+- verification performed against a different version/environment.
 
-### 12. DEPLOYMENT_DECIDED
+Evidence added after an unauthorized action does not retroactively authorize it.
 
-**Actor:** Lead Integrator, with Owner authority when production-impacting.
+## Copilot seed handling
 
-Record one of:
+When Copilot supplies an initial commit:
 
-- `REQUIRED`;
-- `NOT_REQUIRED`;
-- `BLOCKED`.
+1. Record the seed SHA.
+2. Do not treat the Copilot branch/PR as authoritative.
+3. Assigned team specialist reviews the seed and decides what to adopt.
+4. Final implementation lives on the team-owned issue branch/PR.
+5. Team specialist produces the final implementation evidence.
+6. Copilot then returns to reviewer-only role.
 
-`NOT_REQUIRED` is appropriate for documentation-only or repository-only changes that cannot affect runtime behavior.
+## Review order
 
-### 13. DEPLOYED
+For code PRs:
 
-**Actor:** Lead Integrator, deployment agent, or Repository Owner with deployment authority.
+`Team specialist → Team QA → Copilot review → Team addresses findings → Raelvi final technical review → Lead readiness → Owner approval → explicit MERGE_AUTHORIZED`
 
-Required evidence when deployment is required:
+Review evidence is SHA-specific. A material change after review invalidates the affected review.
 
-- deployed commit/merge SHA;
-- target environment;
-- deployment result/status;
-- configuration/migration result if applicable.
+## Recovery
 
-A successful Git merge is not proof of a successful deployment.
+### QA or review failed
 
-### 14. VERIFIED
+Return to `IMPLEMENTATION_IN_PROGRESS`, preserve failed evidence in history, fix on the team-owned branch, rerun checks, and repeat required reviews.
 
-**Actor:** QA agent or Lead Integrator, independent from the deployment action when practical.
+### Copilot accidentally became implementer/PR owner
 
-Runtime changes must be checked against the deployed version, not merely the source branch.
-
-Verification may include:
-
-- `/health` endpoint;
-- homepage and booking form load;
-- price calculation;
-- date availability;
-- admin login/admin UI;
-- Stripe test-mode flow/webhook handling when relevant;
-- database persistence after restart/redeploy when relevant;
-- security headers/CSP when relevant.
-
-For `DEPLOYMENT_DECIDED=NOT_REQUIRED`, verification means confirming the merged repository state and required CI/review evidence.
-
-### 15. CLOSED
-
-**Actor:** Lead Integrator or Repository Owner.
-
-An issue closes only when:
-
-- acceptance criteria are satisfied;
-- required verification is complete;
-- follow-up work is either unnecessary or represented by separate issues;
-- the canonical GitHub issue/PR history contains enough evidence to reconstruct what happened.
-
-## Blocking rules
-
-The following conditions block forward transition:
-
-1. Wrong issue, branch, or baseline identity.
-2. Missing acceptance criteria for material work.
-3. Missing required specialist assignment.
-4. Known failing tests relevant to the change.
-5. No-op or misleading tests presented as evidence.
-6. Unresolved payment-integrity risk.
-7. Unresolved customer-data or persistence risk.
-8. Unreviewed authentication/security changes.
-9. Missing migration/rollback plan for a destructive or stateful DB change.
-10. Branch head materially changed after QA/approval without revalidation.
-11. Merge conflicts or dependency conflicts.
-12. Missing explicit Repository Owner `MERGE_AUTHORIZED` instruction for `main`.
-13. Production deployment requested without required Owner authorization.
-14. Deployment outcome unknown.
-15. Verification performed against a different commit/environment than the deployed target.
-
-Evidence added after an unauthorized action does not retroactively make the action compliant. The correct response is to record the deviation, stop, and let the Owner/Lead determine recovery.
-
-## Concurrency rules
-
-Multiple issues may proceed in parallel when their scopes are independent.
-
-Rules:
-
-- each issue keeps its own branch and PR;
-- agents do not share one branch for unrelated fixes;
-- cross-branch dependencies are recorded explicitly;
-- the Lead decides merge order;
-- if one merge invalidates another branch's test evidence, that branch must be rebased/updated and revalidated before merge.
-
-Parallel work must reduce delivery time without weakening review or evidence.
-
-## Retry and recovery
-
-### Implementation failed
-
-Return to `IMPLEMENTATION_IN_PROGRESS` on the same issue/branch when practical. Do not erase failed attempts from Git/PR history.
-
-### QA failed
-
-Record the failure, correct the branch, rerun relevant tests, and obtain a new `QA_CONFORM` verdict.
-
-### Merge blocked
-
-Resolve conflicts on the issue branch, rerun relevant checks, and revalidate approvals if the resulting diff materially changed. Do not merge until the Owner issues a fresh or still-applicable `MERGE_AUTHORIZED` instruction.
+Stop. Preserve any useful commits as non-authoritative seed evidence. Close or demote the Copilot-owned PR, move implementation responsibility back to the designated team specialist, and require a new team-owned candidate before review gates resume.
 
 ### Unauthorized merge
 
-Stop immediately. Record the deviation. Do not attempt another direct write to `main` to repair it without Owner authorization. Prepare a separate revert branch/PR and wait for explicit Owner authorization before merging the rollback.
-
-### Deployment failed with known failure
-
-Do not mark `DEPLOYED`. Correct through the appropriate issue/branch or perform an authorized rollback.
+Stop immediately. Record the deviation. Do not write directly to `main` to repair it. Prepare a separate rollback PR and wait for explicit Owner merge authorization.
 
 ### Deployment outcome unknown
 
-Do not redeploy blindly. First reconcile the deployment platform and identify whether the target commit actually reached production.
-
-### Production regression
-
-Create or reopen a GitHub issue immediately. The Lead decides whether to prepare a rollback or forward fix. Execution of either into `main` still requires explicit Owner merge authorization.
+Do not redeploy blindly. Reconcile the deployment platform first.
 
 ## Canonical evidence format
-
-GitHub is the authoritative process record. Evidence should live in the issue and PR rather than in duplicate status documents.
-
-A concise transition comment may use:
 
 ```text
 PROCESS_STATE
 issue: #<number>
 state: <STATE>
-actor: <agent-id or owner>
+actor: <agent-id, reviewer, or owner>
 branch: <branch>
 head_sha: <sha>
 evidence:
   tests: <result or link>
-  review: <result or link>
+  copilot_review: <result or N/A>
+  raelvi_review: <result or N/A>
   deployment: <result or N/A>
-blockers: none | <concise blockers>
+blockers: none | <blockers>
 ```
-
-The recorded SHA matters: evidence for one revision does not automatically validate a later revision.
-
-## Required handoff sequence
-
-Normal implementation handoff:
-
-`Specialist → QA → Lead Integrator → Repository Owner review → explicit MERGE_AUTHORIZED → Merge/Deployment actor → QA/Lead verification`
-
-No handoff transfers responsibility for facts that have not been verified.
 
 ## Current issue routing
 
 - `AGT-DATA-001`: #1, #2, #5
-- `AGT-WEB-001`: #3, #4, #6
+- `AGT-WEB-001`: #3, #4, #6, #17
 - `AGT-QA-001`: #7, #8, #9
-- `AGT-LEAD-001`: coordination, integration, merge order, release readiness
+- `AGT-LEAD-001`: coordination, integration, release readiness
 
-This routing may change only through a recorded Lead decision.
+Routing changes require a recorded Lead decision.
