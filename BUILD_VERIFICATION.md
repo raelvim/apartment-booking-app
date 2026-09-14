@@ -106,11 +106,32 @@ npm run dev
 Existing test scripts include:
 
 ```bash
+node test-database-path.js
 node test-security.js
 node test-booking-flow.js
 ```
 
 Tests must use isolated development/test data and test/mock payment configuration. Never run destructive tests against production data.
+
+For SQLite path/persistence changes, use isolated temporary data and record the
+exact commands. Current focused verification commands are:
+
+```bash
+node test-database-path.js
+
+RESERVATIONS_DB_PATH=/tmp/issue23-db/reservations.db \
+ADMIN_PASSWORD=testpass JWT_SECRET=testjwt \
+MOCK_PAYMENTS=true NODE_ENV=development PORT=3001 \
+DOMAIN=http://localhost:3001 ALLOWED_ORIGINS=http://localhost:3001 \
+node server/index.js
+
+RESERVATIONS_DB_PATH=/tmp/issue23-db/reservations.db node test-booking-flow.js
+```
+
+`test-database-path.js` proves the local default remains `server/reservations.db`
+and that a configured path bootstraps schema on a fresh SQLite file. The
+isolated `test-booking-flow.js` run proves booking/hold behavior still works
+when the backend uses a non-default SQLite path.
 
 ## 5. Evidence rule
 

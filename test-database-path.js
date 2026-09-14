@@ -1,3 +1,6 @@
+// Verifica que RESERVATIONS_DB_PATH sea opcional en local y que un archivo
+// SQLite nuevo en una ruta configurada inicialice el esquema correctamente.
+// Uso: node test-database-path.js
 const assert = require("assert");
 const fs = require("fs");
 const os = require("os");
@@ -50,38 +53,42 @@ function queryDb(dbPath, sql) {
   );
 
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "reservations-db-"));
-  const configuredDbPath = path.join(tempDir, "nested", "reservations.db");
-  const createDbCode = `
-    process.env.RESERVATIONS_DB_PATH = ${JSON.stringify(configuredDbPath)};
-    const db = require("./server/database.js");
-    db.get("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'bookings'", (error, row) => {
-      if (error) {
-        console.error(error);
-        process.exit(1);
-      }
-      if (!row) {
-        console.error("bookings table missing");
-        process.exit(1);
-      }
-      db.close(() => process.exit(0));
-    });
-  `;
-  runNode({ RESERVATIONS_DB_PATH: configuredDbPath }, createDbCode);
+  try {
+    const configuredDbPath = path.join(tempDir, "nested", "reservations.db");
+    const createDbCode = `
+      process.env.RESERVATIONS_DB_PATH = ${JSON.stringify(configuredDbPath)};
+      const db = require("./server/database.js");
+      db.get("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'bookings'", (error, row) => {
+        if (error) {
+          console.error(error);
+          process.exit(1);
+        }
+        if (!row) {
+          console.error("bookings table missing");
+          process.exit(1);
+        }
+        db.close(() => process.exit(0));
+      });
+    `;
+    runNode({ RESERVATIONS_DB_PATH: configuredDbPath }, createDbCode);
 
-  assert.ok(
-    fs.existsSync(configuredDbPath),
-    "custom RESERVATIONS_DB_PATH should create the SQLite file on the configured path",
-  );
+    assert.ok(
+      fs.existsSync(configuredDbPath),
+      "custom RESERVATIONS_DB_PATH should create the SQLite file on the configured path",
+    );
 
-  const tableRow = await queryDb(
-    configuredDbPath,
-    "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'booking_holds'",
-  );
-  assert.strictEqual(
-    tableRow && tableRow.name,
-    "booking_holds",
-    "schema should be initialized in the configured SQLite file",
-  );
+    const tableRow = await queryDb(
+      configuredDbPath,
+      "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'booking_holds'",
+    );
+    assert.strictEqual(
+      tableRow && tableRow.name,
+      "booking_holds",
+      "schema should be initialized in the configured SQLite file",
+    );
+  } finally {
+    fs.rmSync(tempDir, { recursive: true, force: true });
+  }
 
   console.log("✅ database path configuration verified");
 })().catch((error) => {

@@ -8,18 +8,25 @@
 #   4. Deploy. La URL resultante es
 #      https://escapelakenorman-api-l2da.onrender.com (ya configurada en el frontend).
 #
-# IMPORTANTE (SQLite): este servicio debe usar RESERVATIONS_DB_PATH apuntando
-# a /var/data/reservations.db para que el archivo viva en el disco persistente.
-# Antes del cutover:
-#   1. Inventariar y respaldar el archivo productivo actual (server/reservations.db)
-#      fuera del servicio con fecha/hora y conteos de tablas críticas.
-#   2. Adjuntar el disco persistente SIN montar sobre /opt/render/project/src.
-#   3. Copiar el respaldo a /var/data/reservations.db antes de aceptar tráfico.
-#   4. Verificar que bookings / booking_holds / manual_charges conserven conteos.
+# IMPORTANTE (SQLite): usar un cutover en DOS etapas para no arrancar con una
+# base vacía en /var/data.
+# Pre-cutover:
+#   1. Inventariar y respaldar el archivo productivo actual
+#      (/opt/render/project/src/server/reservations.db) fuera del servicio.
+#   2. Registrar fecha/hora, tamaño y conteos de bookings / booking_holds /
+#      manual_charges / external_blocks en ese respaldo.
+# Etapa 1 (segura): desplegar este Blueprint con el disco adjunto, pero dejando
+# RESERVATIONS_DB_PATH vacío para que la app siga leyendo la ruta actual.
+# Cutover (etapa 2):
+#   3. Copiar el respaldo verificado a /var/data/reservations.db.
+#   4. Actualizar RESERVATIONS_DB_PATH a /var/data/reservations.db y redeploy.
+# Verificación:
+#   5. Confirmar que los conteos críticos coincidan y que un registro controlado
+#      sobreviva a un restart/redeploy.
 # Rollback:
-#   - Conservar el respaldo previo al cutover.
-#   - Restaurar ese respaldo en la ruta anterior o volver a copiarlo al disco
-#     persistente antes del redeploy de reversión.
+#   - Volver a dejar RESERVATIONS_DB_PATH vacío para regresar a la ruta previa.
+#   - Si el disco quedó inconsistente, restaurar el respaldo verificado antes de
+#     cualquier nuevo redeploy.
 
 services:
   - type: web
@@ -39,8 +46,11 @@ services:
         value: production
       - key: PORT
         value: 3001
+      # Etapa 1: dejar este valor vacío para no cambiar la ruta aún.
+      # Etapa 2: después de copiar/verificar el respaldo en /var/data,
+      # actualizarlo a /var/data/reservations.db y redeploy.
       - key: RESERVATIONS_DB_PATH
-        value: /var/data/reservations.db
+        value: ""
 
       # Frontend (Netlify): de aquí salen success.html / cancel.html.
       # DOMAIN es la versión "canónica" del sitio (a donde Stripe redirige).
