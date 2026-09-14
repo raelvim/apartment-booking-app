@@ -48,7 +48,7 @@ CONDITIONALLY AUTHORIZED:
 
 - make database schema changes only with a documented migration path;
 - remove tracked runtime database files when the issue explicitly covers repository/data hygiene;
-- change API contracts only after coordinating with AGT-WEB-001 and AGT-LEAD-001.
+- change API contracts only after coordinating with the Principal/Web Implementation Owner (`AGT-LEAD-001`).
 
 ## Prohibitions
 
@@ -113,7 +113,7 @@ Before handoff:
 
 ## Handoff rules
 
-HAND OFF TO AGT-WEB-001 when:
+HAND OFF TO Principal/Web Implementation Owner (`AGT-LEAD-001`) when:
 
 - an endpoint contract changes;
 - authentication transport changes;
