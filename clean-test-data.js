@@ -2,9 +2,9 @@
 // por las pruebas automatizadas, conservando los bloqueos de Airbnb.
 // Uso: node clean-test-data.js
 const sqlite3 = require("sqlite3").verbose();
-const path = require("path");
+const { resolveReservationsDbPath } = require("./server/database-path");
 const db = new sqlite3.Database(
-  path.join(__dirname, "server", "reservations.db"),
+  resolveReservationsDbPath(),
 );
 
 db.serialize(() => {

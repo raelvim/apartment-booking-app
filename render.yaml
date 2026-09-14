@@ -8,33 +8,39 @@
 #   4. Deploy. La URL resultante es
 #      https://escapelakenorman-api-l2da.onrender.com (ya configurada en el frontend).
 #
-# IMPORTANTE (SQLite): este servicio usa reservations.db en disco. En el plan
-# gratuito el disco es EFÍMERO (se borra en cada redeploy/restart). El disco
-# persistente de abajo (1 GB) lo mantiene, pero requiere plan de pago (~$7/mes).
-# Alternativa gratuita a futuro: migrar a Postgres (Render Postgres free).
+# IMPORTANTE (SQLite): este servicio debe usar RESERVATIONS_DB_PATH apuntando
+# a /var/data/reservations.db para que el archivo viva en el disco persistente.
+# Antes del cutover:
+#   1. Inventariar y respaldar el archivo productivo actual (server/reservations.db)
+#      fuera del servicio con fecha/hora y conteos de tablas críticas.
+#   2. Adjuntar el disco persistente SIN montar sobre /opt/render/project/src.
+#   3. Copiar el respaldo a /var/data/reservations.db antes de aceptar tráfico.
+#   4. Verificar que bookings / booking_holds / manual_charges conserven conteos.
+# Rollback:
+#   - Conservar el respaldo previo al cutover.
+#   - Restaurar ese respaldo en la ruta anterior o volver a copiarlo al disco
+#     persistente antes del redeploy de reversión.
 
 services:
   - type: web
     name: escapelakenorman-api
     runtime: node
-    plan: free
+    plan: 0.5c-512mb
     buildCommand: npm install
     startCommand: node server/index.js
     healthCheckPath: /health
-
-    # Disco persistente para SQLite (comentado: requiere plan de pago).
-    # Descomenta si el cliente acepta el plan paid; si no, la DB se reinicia
-    # en cada deploy (aceptable SOLO mientras se prueba).
-    # disk:
-    #   name: escapelakenorman-data
-    #   mountPath: /opt/render/project/src/server
-    #   sizeGB: 1
+    disk:
+      name: escapelakenorman-data
+      mountPath: /var/data
+      sizeGB: 1
 
     envVars:
       - key: NODE_ENV
         value: production
       - key: PORT
         value: 3001
+      - key: RESERVATIONS_DB_PATH
+        value: /var/data/reservations.db
 
       # Frontend (Netlify): de aquí salen success.html / cancel.html.
       # DOMAIN es la versión "canónica" del sitio (a donde Stripe redirige).

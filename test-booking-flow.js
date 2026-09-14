@@ -2,9 +2,9 @@
 // Uso: node test-booking-flow.js  (requiere el servidor corriendo en :3001)
 const API = "http://localhost:3001";
 const sqlite3 = require("sqlite3").verbose();
-const path = require("path");
+const { resolveReservationsDbPath } = require("./server/database-path");
 const db = new sqlite3.Database(
-  path.join(__dirname, "server", "reservations.db"),
+  resolveReservationsDbPath(),
 );
 
 let passed = 0;
