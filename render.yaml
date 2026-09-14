@@ -15,7 +15,7 @@
 
 services:
   - type: web
-    name: escapelakenorman-api-l2da
+    name: escapelakenorman-api
     runtime: node
     plan: free
     buildCommand: npm install
