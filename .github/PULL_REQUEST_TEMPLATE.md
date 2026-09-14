@@ -7,7 +7,8 @@ Closes #
 ## Process identity
 
 - Issue: #
-- Assigned agent: `AGT-...`
+- Implementation owner: `Principal/Web` | `AGT-DATA-001` | `AGT-QA-001` | other approved owner
+- Independent QA owner:
 - Branch: `issue-...`
 - Baseline/main SHA when work started:
 - Current head SHA:
@@ -30,7 +31,7 @@ Copy the issue acceptance criteria and mark each one:
 
 ## Verification evidence
 
-### Automated tests
+### Implementation-owner checks
 
 Commands/checks run:
 
@@ -48,6 +49,22 @@ Result:
 - [ ] No no-op/fake assertion is being presented as evidence.
 - [ ] Tests do not modify production/customer data.
 
+### Independent QA
+
+QA actor:
+
+```text
+
+```
+
+QA result / evidence:
+
+```text
+
+```
+
+- [ ] `QA_CONFORM` is independent of the implementation owner.
+
 ### Manual verification
 
 Describe any manual check performed:
@@ -60,7 +77,7 @@ Describe any manual check performed:
 
 - [ ] No production secrets are added or exposed.
 - [ ] No unexpected customer/private data is included.
-- [ ] Payment behavior is unchanged, or payment review is included.
+- [ ] Payment behavior is unchanged, or `AGT-DATA-001` review is included.
 - [ ] Database behavior is unchanged, or migration/rollback notes are included.
 - [ ] Authentication/authorization is unchanged, or security review is included.
 - [ ] Deployment/infrastructure is unchanged, or deployment review is included.
@@ -89,12 +106,16 @@ None known.
 
 ## Required handoff
 
-- [ ] Specialist result submitted.
-- [ ] `QA_CONFORM` obtained.
+- [ ] Implementation owner submitted `RESULT_SUBMITTED` for the exact head.
+- [ ] Independent `QA_CONFORM` obtained.
+- [ ] Copilot reviewed the exact QA-conform candidate for code PRs.
+- [ ] Valid Copilot findings were addressed/dispositioned.
+- [ ] Raelvi approved the exact final head for code PRs.
 - [ ] `LEAD_APPROVED` obtained.
 - [ ] `OWNER_APPROVED` obtained when required by `DEVELOPMENT_PROCESS.md`.
 - [ ] All blocking review threads resolved.
 - [ ] Required CI checks green for the current head SHA.
+- [ ] Separate Repository Owner `MERGE_AUTHORIZED` instruction received before merge.
 
 ## Deployment decision
 
