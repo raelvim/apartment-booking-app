@@ -4,7 +4,7 @@ const fs = require("fs");
 const path = require("path");
 const vm = require("vm");
 
-const EXPECTED_PROD = "https://escapelakenorman-api.onrender.com";
+const EXPECTED_PROD = "https://escapelakenorman-api-l2da.onrender.com";
 
 const files = [
   "public/booking.js",
@@ -20,15 +20,19 @@ for (const rel of files) {
   const abs = path.join(__dirname, rel);
   const content = fs.readFileSync(abs, "utf8");
 
-  const prodMatch = content.match(/const\s+PROD_API_URL\s*=\s*(["'`])([^"'`]+)\1/);
+  const prodMatch = content.match(
+    /const\s+PROD_API_URL\s*=\s*(["'`])([^"'`]+)\1/,
+  );
   const currentProdUrl = prodMatch ? prodMatch[2] : null;
   const apiExprMatch = content.match(/const\s+API_URL\s*=\s*([\s\S]*?);/);
   const apiExpr = apiExprMatch ? apiExprMatch[1].trim() : null;
-  const renderUrls = [...content.matchAll(/https:\/\/[a-z0-9-]+\.onrender\.com/g)].map(
-    (m) => m[0],
-  );
+  const renderUrls = [
+    ...content.matchAll(/https:\/\/[a-z0-9-]+\.onrender\.com/g),
+  ].map((m) => m[0]);
   const hasExpected = currentProdUrl === EXPECTED_PROD;
-  const hasUnexpectedRenderUrl = renderUrls.some((url) => url !== EXPECTED_PROD);
+  const hasUnexpectedRenderUrl = renderUrls.some(
+    (url) => url !== EXPECTED_PROD,
+  );
   let keepsLocalhost = false;
 
   if (apiExpr && currentProdUrl) {
@@ -50,7 +54,8 @@ for (const rel of files) {
   if (!hasExpected || hasUnexpectedRenderUrl || !keepsLocalhost) {
     failed += 1;
     console.log(`❌ ${rel}`);
-    if (!hasExpected) console.log(`   - Missing expected URL: ${EXPECTED_PROD}`);
+    if (!hasExpected)
+      console.log(`   - Missing expected URL: ${EXPECTED_PROD}`);
     if (hasUnexpectedRenderUrl)
       console.log(
         `   - Unexpected Render URL(s): ${renderUrls.filter((url) => url !== EXPECTED_PROD).join(", ")}`,
