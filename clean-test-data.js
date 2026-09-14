@@ -2,10 +2,16 @@
 // por las pruebas automatizadas, conservando los bloqueos de Airbnb.
 // Uso: node clean-test-data.js
 const sqlite3 = require("sqlite3").verbose();
-const path = require("path");
-const db = new sqlite3.Database(
-  path.join(__dirname, "server", "reservations.db"),
-);
+const { resolveDatabasePath } = require("./server/database-path");
+
+const dbPath = resolveDatabasePath();
+if (process.env.NODE_ENV === "production" || dbPath.startsWith("/var/data/")) {
+  throw new Error(
+    "Refusing to clean a production/persistent database. Use an isolated test DB.",
+  );
+}
+
+const db = new sqlite3.Database(dbPath);
 
 db.serialize(() => {
   db.get("SELECT COUNT(*) AS n FROM bookings", (e, r) =>
