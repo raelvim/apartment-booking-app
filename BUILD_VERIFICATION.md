@@ -1,5 +1,19 @@
 # BUILD_VERIFICATION.md — AI Agent Bootstrap
 
+> ## ABSOLUTE COPILOT RESTRICTION — OVERRIDES ALL CONFLICTING TEXT
+>
+> This rule has priority over any conflicting Copilot language anywhere else in this file or in repository governance documents until those documents are synchronized.
+>
+> - GitHub Copilot MUST NEVER be assigned to a GitHub issue, pull request, task, or repository workflow as an assignee, coding agent, implementation agent, or code-generation actor.
+> - The Principal/Lead MUST NEVER trigger any GitHub action, assignment, automation, connector action, or workflow that can cause Copilot to create or modify implementation code, branches, commits, pull requests, patches, or implementation candidates.
+> - Copilot MUST NEVER create an implementation branch, commit, pull request, patch, seed commit, seed PR, or other implementation artifact.
+> - Copilot MAY ONLY act as a reviewer after the designated implementation owner has submitted `RESULT_SUBMITTED` and an independent reviewer has recorded `QA_CONFORM` for the exact candidate head SHA.
+> - A Copilot review must be explicitly requested on the existing implementation PR. Copilot findings return to the designated implementation owner; Copilot must not implement the fixes.
+> - Any Copilot-generated implementation artifact created contrary to this rule is **UNAUTHORIZED**. It must not be merged, adopted, cherry-picked, copied into the authoritative branch, or treated as implementation evidence unless the Repository Owner gives a separate explicit exception naming the exact artifact and permitted use.
+> - If an unauthorized Copilot artifact appears, stop, report it to the Repository Owner, and wait for explicit disposition instructions. Do not silently reuse or delete it.
+> - GitHub automation, connectors, coding agents, or other tooling MUST NOT substitute for `AGT-DATA-001`, `AGT-QA-001`, the Principal/Web Implementation Owner, or any other designated implementation owner/reviewer.
+> - Any lower-priority text that says Copilot may provide seed code, seed commits, seed branches, or implementation work is obsolete and MUST NOT be followed.
+
 > ## GOLDEN RULE — IMPLEMENTATION OWNERSHIP
 >
 > The principal assistant/coordinator is also the permanent **Web Implementation Owner** for this repository.
@@ -25,9 +39,9 @@
 > - Database / payments PRs: `AGT-DATA-001`.
 > - Testing / architecture PRs: `AGT-QA-001` when that agent is the implementer; independent QA must then be assigned to another qualified reviewer.
 >
-> GitHub Copilot may provide an optional initial seed commit, but Copilot is not the final implementation owner. The implementation owner must inspect, adopt, correct, or replace seed work and take responsibility for the final branch head.
+> GitHub Copilot is reviewer-only. Copilot must not provide seed commits, implementation branches, implementation PRs, or implementation fixes. The identified implementation owner is solely responsible for producing the implementation candidate and taking responsibility for the final branch head.
 >
-> After implementation and independent QA, Copilot is reviewer-only. Valid Copilot findings return to the implementation owner. **Raelvi (`raelvim`) has the final technical review word on every code PR** against the exact final head SHA.
+> After implementation and independent QA, Copilot may review the exact candidate. Valid Copilot findings return to the implementation owner. **Raelvi (`raelvim`) has the final technical review word on every code PR** against the exact final head SHA.
 >
 > Raelvi approval is not merge authorization. Only the Repository Owner can authorize a merge to `main`.
 
@@ -83,7 +97,8 @@ Before implementation, confirm:
 - [ ] No unrelated branch changes
 - [ ] Build/test capability identified
 - [ ] No tracked secrets or customer data exposure
-- [ ] If Copilot supplied a seed commit, the implementation owner has explicitly inspected/adopted it
+- [ ] Copilot is not assigned as an issue/PR assignee, coding agent, implementation agent, or code-generation actor
+- [ ] No Copilot-generated implementation branch/commit/PR/patch is being used
 - [ ] Independent QA ownership is identified
 
 If any item is uncertain, implementation stops.
@@ -138,8 +153,10 @@ Forward progress stops if any of the following applies:
 - wrong or unknown issue/branch/SHA;
 - required non-web specialist unavailable;
 - principal assistant would need to impersonate Data, QA, or another independent specialist;
-- Copilot is acting as final implementer or PR owner;
-- implementation owner has not taken responsibility for Copilot seed work;
+- Copilot is assigned to an issue/PR/task as a coding or implementation agent;
+- an action would trigger Copilot to create or modify implementation code, a branch, commit, PR, patch, or candidate;
+- an unauthorized Copilot-generated implementation artifact exists in the proposed implementation path;
+- GitHub automation, a connector, coding agent, or other tool is substituting for a designated specialist or implementation owner;
 - issue scope does not authorize the change;
 - relevant tests fail;
 - payment integrity is uncertain;
@@ -188,7 +205,7 @@ For code PRs:
 
 - `RESULT_SUBMITTED` comes from the identified implementation owner. For web issues, that is the principal assistant.
 - `QA_CONFORM` must be independent of the implementation owner.
-- `COPILOT_REVIEWED` means Copilot reviewed the final candidate and findings were addressed or explicitly dispositioned.
+- `COPILOT_REVIEWED` means Copilot reviewed the exact final candidate only after `RESULT_SUBMITTED` and `QA_CONFORM`; findings were addressed or explicitly dispositioned by the implementation owner.
 - `RAELVI_APPROVED` means Raelvi reviewed the exact final candidate head and gave final technical approval.
 - A material code change after QA, Copilot review, or Raelvi approval invalidates the affected evidence and requires it again.
 
@@ -210,6 +227,8 @@ May not:
 
 - act as `AGT-DATA-001` for database/payment/persistence implementation;
 - act as `AGT-QA-001` for independent QA of its own code;
+- assign or trigger Copilot as a coding/implementation agent;
+- use, adopt, cherry-pick, or copy unauthorized Copilot-generated implementation work without a separate explicit Repository Owner exception naming the exact artifact;
 - make broad backend/CI/architecture changes outside web scope;
 - merge to `main` without explicit Repository Owner authorization;
 - deploy production changes without the approvals required by the process.
@@ -224,7 +243,7 @@ Owns Testing & Architecture implementation and normally performs independent QA.
 
 ### GitHub Copilot
 
-Reviewer role after the implementation owner has produced a reviewable candidate. Optional seed commits are non-authoritative until adopted.
+Reviewer-only after `RESULT_SUBMITTED` and independent `QA_CONFORM` on the exact candidate. Copilot must never be assigned as a coding agent or implementation actor and must never create or modify implementation code, branches, commits, PRs, patches, or fixes.
 
 ### Raelvi (`raelvim`)
 
