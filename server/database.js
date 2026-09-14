@@ -4,8 +4,11 @@ const sqlite3 = require("sqlite3").verbose();
 const path = require("path");
 
 // La ruta a nuestro archivo de base de datos.
-// Se creará un archivo llamado 'reservations.db' en la carpeta 'server'.
-const dbPath = path.resolve(__dirname, "reservations.db");
+// En produccion (Render) se define DATABASE_PATH apuntando al disco persistente
+// (p.ej. /var/data/reservations.db). En desarrollo local se usa la carpeta server.
+const dbPath = process.env.DATABASE_PATH
+  ? path.resolve(process.env.DATABASE_PATH)
+  : path.resolve(__dirname, "reservations.db");
 
 // Creamos o abrimos la base de datos
 const db = new sqlite3.Database(dbPath, (err) => {

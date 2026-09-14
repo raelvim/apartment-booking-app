@@ -17,24 +17,26 @@ services:
   - type: web
     name: escapelakenorman-api
     runtime: node
-    plan: free
+    plan: starter
     buildCommand: npm install
     startCommand: node server/index.js
     healthCheckPath: /health
 
-    # Disco persistente para SQLite (comentado: requiere plan de pago).
-    # Descomenta si el cliente acepta el plan paid; si no, la DB se reinicia
-    # en cada deploy (aceptable SOLO mientras se prueba).
-    # disk:
-    #   name: escapelakenorman-data
-    #   mountPath: /opt/render/project/src/server
-    #   sizeGB: 1
+    # Disco persistente para SQLite (~$0.25/mes por 1 GB).
+    # Se monta en /var/data (directorio dedicado, NO sobre el codigo de la app)
+    # y la base de datos se ubica via DATABASE_PATH mas abajo.
+    disk:
+      name: escapelakenorman-data
+      mountPath: /var/data
+      sizeGB: 1
 
     envVars:
       - key: NODE_ENV
         value: production
       - key: PORT
         value: 3001
+      - key: DATABASE_PATH
+        value: /var/data/reservations.db
 
       # Frontend (Netlify): de aquí salen success.html / cancel.html.
       # DOMAIN es la versión "canónica" del sitio (a donde Stripe redirige).
