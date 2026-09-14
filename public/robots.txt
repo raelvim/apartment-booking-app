@@ -7,4 +7,4 @@ Disallow: /admin.html
 Disallow: /login.html
 Disallow: /tax-settings.html
 
-Sitemap: https://escapelakenorman.com/sitemap.xml
+Sitemap: https://www.escapelakenorman.com/sitemap.xml

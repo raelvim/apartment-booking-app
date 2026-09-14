@@ -311,8 +311,12 @@
       }
 
       @keyframes spin {
-        0% { transform: rotate(0deg); }
-        100% { transform: rotate(360deg); }
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
       }
 
       .back-link {
@@ -415,7 +419,9 @@
           <div class="airbnb-note">
             <i class="fas fa-info-circle"></i>
             <span>
-              <strong>Airbnb bookings:</strong> Airbnb automatically collects and remits these taxes. These rates apply to direct bookings made through this website.
+              <strong>Airbnb bookings:</strong> Airbnb automatically collects
+              and remits these taxes. These rates apply to direct bookings made
+              through this website.
             </span>
           </div>
 
@@ -464,7 +470,8 @@
             <div class="form-group">
               <label>Monthly Rental Rate (USD)</label>
               <div class="description">
-                Fixed monthly rate for long-term rentals. Only sales tax (8.25%) applies — no occupancy tax.
+                Fixed monthly rate for long-term rentals. Only sales tax (8.25%)
+                applies — no occupancy tax.
               </div>
               <div class="input-group">
                 <span class="percent-sign">$</span>
@@ -485,7 +492,9 @@
               <div class="preview-title">
                 <span class="icon">&#x1f3e8;</span>
                 Short Stay Preview
-                <span style="font-weight: 400; font-size: 13px; color: #888;">(2 nights @ $150)</span>
+                <span style="font-weight: 400; font-size: 13px; color: #888"
+                  >(2 nights @ $150)</span
+                >
               </div>
 
               <div class="preview-subtotal-row preview-row">
@@ -494,12 +503,22 @@
               </div>
 
               <div class="preview-row">
-                <span class="label">Sales Tax <span style="color:#999;">(<span id="previewSalesRate">8.25</span>%)</span></span>
+                <span class="label"
+                  >Sales Tax
+                  <span style="color: #999"
+                    >(<span id="previewSalesRate">8.25</span>%)</span
+                  ></span
+                >
                 <span class="value" id="previewSalesTax">$24.75</span>
               </div>
 
               <div class="preview-row">
-                <span class="label">Occupancy Tax <span style="color:#999;">(<span id="previewOccRate">8.00</span>%)</span></span>
+                <span class="label"
+                  >Occupancy Tax
+                  <span style="color: #999"
+                    >(<span id="previewOccRate">8.00</span>%)</span
+                  ></span
+                >
                 <span class="value" id="previewOccupancyTax">$24.00</span>
               </div>
 
@@ -510,9 +529,14 @@
                 <span class="value" id="previewTotalTax">$48.75</span>
               </div>
 
-              <div class="preview-total" style="padding-top: 6px;">
+              <div class="preview-total" style="padding-top: 6px">
                 <span class="label">Final Total</span>
-                <span class="value" id="previewFinalTotal" style="font-size: 20px;">$348.75</span>
+                <span
+                  class="value"
+                  id="previewFinalTotal"
+                  style="font-size: 20px"
+                  >$348.75</span
+                >
               </div>
             </div>
 
@@ -521,16 +545,28 @@
               <div class="preview-title">
                 <span class="icon">&#x1f4c5;</span>
                 Monthly Rental Preview
-                <span style="font-weight: 400; font-size: 13px; color: #888;">(3 months)</span>
+                <span style="font-weight: 400; font-size: 13px; color: #888"
+                  >(3 months)</span
+                >
               </div>
 
               <div class="preview-subtotal-row preview-row">
-                <span class="label">Subtotal <span style="color:#999;">(3 × $<span id="previewMonthlyRate">1,800</span>)</span></span>
+                <span class="label"
+                  >Subtotal
+                  <span style="color: #999"
+                    >(3 × $<span id="previewMonthlyRate">1,800</span>)</span
+                  ></span
+                >
                 <span class="value" id="previewMonthlySubtotal">$5,400.00</span>
               </div>
 
               <div class="preview-row">
-                <span class="label">Sales Tax <span style="color:#999;">(<span id="previewMonthlySalesRate">8.25</span>%)</span></span>
+                <span class="label"
+                  >Sales Tax
+                  <span style="color: #999"
+                    >(<span id="previewMonthlySalesRate">8.25</span>%)</span
+                  ></span
+                >
                 <span class="value" id="previewMonthlySalesTax">$445.50</span>
               </div>
 
@@ -546,9 +582,14 @@
                 <span class="value" id="previewMonthlyTaxTotal">$445.50</span>
               </div>
 
-              <div class="preview-total" style="padding-top: 6px;">
+              <div class="preview-total" style="padding-top: 6px">
                 <span class="label">Final Total</span>
-                <span class="value" id="previewMonthlyTotal" style="font-size: 20px;">$5,845.50</span>
+                <span
+                  class="value"
+                  id="previewMonthlyTotal"
+                  style="font-size: 20px"
+                  >$5,845.50</span
+                >
               </div>
             </div>
 
@@ -567,7 +608,7 @@
     </div>
 
     <script>
-      const PROD_API_URL = "https://escapelakenorman-api.onrender.com";
+      const PROD_API_URL = "https://escapelakenorman-api-l2da.onrender.com";
       const API_URL = ["localhost", "127.0.0.1"].includes(
         window.location.hostname,
       )
@@ -588,10 +629,13 @@
       };
 
       function formatCurrency(amount) {
-        return "$" + amount.toLocaleString("en-US", {
-          minimumFractionDigits: 2,
-          maximumFractionDigits: 2,
-        });
+        return (
+          "$" +
+          amount.toLocaleString("en-US", {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+          })
+        );
       }
 
       function formatNumber(num) {
@@ -615,10 +659,14 @@
         const monthlyRate = parseFloat(monthlyRateInput.value) || 1800;
 
         // Update rate labels
-        document.getElementById("previewSalesRate").textContent = formatNumber(salesRate);
-        document.getElementById("previewOccRate").textContent = formatNumber(occRate);
-        document.getElementById("previewMonthlySalesRate").textContent = formatNumber(salesRate);
-        document.getElementById("previewMonthlyRate").textContent = formatNumber(monthlyRate);
+        document.getElementById("previewSalesRate").textContent =
+          formatNumber(salesRate);
+        document.getElementById("previewOccRate").textContent =
+          formatNumber(occRate);
+        document.getElementById("previewMonthlySalesRate").textContent =
+          formatNumber(salesRate);
+        document.getElementById("previewMonthlyRate").textContent =
+          formatNumber(monthlyRate);
 
         // Short stay: 2 nights x $150
         const subtotal = 300;
@@ -627,20 +675,28 @@
         const totalTax = salesTax + occTax;
         const finalTotal = subtotal + totalTax;
 
-        document.getElementById("previewSalesTax").textContent = formatCurrency(salesTax);
-        document.getElementById("previewOccupancyTax").textContent = formatCurrency(occTax);
-        document.getElementById("previewTotalTax").textContent = formatCurrency(totalTax);
-        document.getElementById("previewFinalTotal").textContent = formatCurrency(finalTotal);
+        document.getElementById("previewSalesTax").textContent =
+          formatCurrency(salesTax);
+        document.getElementById("previewOccupancyTax").textContent =
+          formatCurrency(occTax);
+        document.getElementById("previewTotalTax").textContent =
+          formatCurrency(totalTax);
+        document.getElementById("previewFinalTotal").textContent =
+          formatCurrency(finalTotal);
 
         // Monthly: 3 months
         const monthlySubtotal = monthlyRate * 3;
         const monthlySalesTax = (monthlySubtotal * salesRate) / 100;
         const monthlyTotal = monthlySubtotal + monthlySalesTax;
 
-        document.getElementById("previewMonthlySubtotal").textContent = formatCurrency(monthlySubtotal);
-        document.getElementById("previewMonthlySalesTax").textContent = formatCurrency(monthlySalesTax);
-        document.getElementById("previewMonthlyTaxTotal").textContent = formatCurrency(monthlySalesTax);
-        document.getElementById("previewMonthlyTotal").textContent = formatCurrency(monthlyTotal);
+        document.getElementById("previewMonthlySubtotal").textContent =
+          formatCurrency(monthlySubtotal);
+        document.getElementById("previewMonthlySalesTax").textContent =
+          formatCurrency(monthlySalesTax);
+        document.getElementById("previewMonthlyTaxTotal").textContent =
+          formatCurrency(monthlySalesTax);
+        document.getElementById("previewMonthlyTotal").textContent =
+          formatCurrency(monthlyTotal);
       }
 
       async function loadSettings() {

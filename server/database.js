@@ -1,18 +1,19 @@
 // server/database.js
 
 const sqlite3 = require("sqlite3").verbose();
-const path = require("path");
+const {
+  resolveDatabasePath,
+  ensureDatabaseDirectory,
+} = require("./database-path");
 
-// La ruta a nuestro archivo de base de datos.
-// Se creará un archivo llamado 'reservations.db' en la carpeta 'server'.
-const dbPath = path.resolve(__dirname, "reservations.db");
+const dbPath = ensureDatabaseDirectory(resolveDatabasePath());
 
 // Creamos o abrimos la base de datos
 const db = new sqlite3.Database(dbPath, (err) => {
   if (err) {
     console.error("Error al abrir la base de datos", err.message);
   } else {
-    console.log("Conectado a la base de datos SQLite.");
+    console.log(`Conectado a la base de datos SQLite: ${dbPath}`);
     // Creamos la tabla de reservas si no existe
     db.run(
       `CREATE TABLE IF NOT EXISTS bookings (
@@ -150,5 +151,8 @@ const db = new sqlite3.Database(dbPath, (err) => {
     );
   }
 });
+
+// Expose the resolved path for diagnostics/tests without changing DB semantics.
+db.databasePath = dbPath;
 
 module.exports = db;
