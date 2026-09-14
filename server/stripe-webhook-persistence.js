@@ -11,8 +11,10 @@ async function persistManualCharge(db, session) {
      SET status = 'paid',
          paid_at = COALESCE(paid_at, datetime('now')),
          stripe_session_id = COALESCE(stripe_session_id, ?)
-     WHERE id = ? AND COALESCE(status, '') <> 'paid'`,
-    [session.id, chargeId],
+     WHERE id = ?
+       AND COALESCE(status, '') <> 'paid'
+       AND (stripe_session_id IS NULL OR stripe_session_id = ?)`,
+    [session.id, chargeId, session.id],
   );
 
   if (result.changes > 0) {
@@ -29,14 +31,14 @@ async function persistManualCharge(db, session) {
   if (!existing) {
     throw new Error(`Manual charge #${chargeId} not found`);
   }
-  if (existing.status !== "paid") {
-    throw new Error(`Manual charge #${chargeId} was not persisted as paid`);
-  }
   if (
     existing.stripe_session_id &&
     existing.stripe_session_id !== session.id
   ) {
     throw new Error(`Manual charge #${chargeId} belongs to another Stripe session`);
+  }
+  if (existing.status !== "paid") {
+    throw new Error(`Manual charge #${chargeId} was not persisted as paid`);
   }
 
   return false;
