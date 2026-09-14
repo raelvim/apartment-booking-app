@@ -4,7 +4,7 @@ const fs = require("fs");
 const path = require("path");
 const vm = require("vm");
 
-const EXPECTED_PROD = "https://escapelakenorman-api-l2da.onrender.com";
+const EXPECTED_PROD = "https://escapelakenorman-api.onrender.com";
 
 const files = [
   "public/booking.js",
