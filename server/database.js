@@ -103,6 +103,16 @@ const db = new sqlite3.Database(dbPath, (err) => {
       () => {}, // ignora error si la columna ya existe
     );
 
+    // Migración: completar la configuración tarifaria centralizada.
+    db.run(
+      `ALTER TABLE tax_settings ADD COLUMN cleaning_fee REAL DEFAULT 0`,
+      () => {}, // ignora error si la columna ya existe
+    );
+    db.run(
+      `ALTER TABLE tax_settings ADD COLUMN minimum_nights INTEGER DEFAULT 10`,
+      () => {}, // ignora error si la columna ya existe
+    );
+
     // Migración: número de huéspedes por reserva
     db.run(
       `ALTER TABLE bookings ADD COLUMN guests INTEGER DEFAULT 2`,
