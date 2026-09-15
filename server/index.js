@@ -230,7 +230,7 @@ function loadTaxSettingsFromDB(callback) {
     SELECT mecklenburg_sales, mecklenburg_occupancy,
            nc_state, mecklenburg_local, occupancy
     FROM tax_settings 
-    ORDER BY updated_at DESC 
+    ORDER BY updated_at DESC, id DESC 
     LIMIT 1
   `;
 
@@ -264,7 +264,7 @@ function loadRatesFromDB(callback) {
     SELECT nightly_rate, monthly_rate, cleaning_fee, minimum_nights,
            mecklenburg_sales, mecklenburg_occupancy
     FROM tax_settings
-    ORDER BY updated_at DESC
+    ORDER BY updated_at DESC, id DESC
     LIMIT 1
   `;
   db.get(sql, [], (err, row) => {
@@ -846,7 +846,7 @@ app.get("/api/monthly-rate", (req, res) => {
   loadTaxSettingsFromDB((rates) => {
     // El monthly_rate viene de la DB; si no existe, usar default
     db.get(
-      `SELECT monthly_rate FROM tax_settings ORDER BY updated_at DESC LIMIT 1`,
+      `SELECT monthly_rate FROM tax_settings ORDER BY updated_at DESC, id DESC LIMIT 1`,
       [],
       (err, row) => {
         const monthlyRate =
@@ -860,7 +860,7 @@ app.get("/api/monthly-rate", (req, res) => {
 // Obtener configuración de tarifa mensual (admin)
 app.get("/api/admin/monthly-rate", checkAdminAuth, (req, res) => {
   db.get(
-    `SELECT monthly_rate FROM tax_settings ORDER BY updated_at DESC LIMIT 1`,
+    `SELECT monthly_rate FROM tax_settings ORDER BY updated_at DESC, id DESC LIMIT 1`,
     [],
     (err, row) => {
       if (err) {
@@ -881,7 +881,7 @@ app.post("/api/admin/monthly-rate", checkAdminAuth, (req, res) => {
   }
   // Actualizar el registro más reciente de tax_settings
   db.run(
-    `UPDATE tax_settings SET monthly_rate = ? WHERE id = (SELECT id FROM tax_settings ORDER BY updated_at DESC LIMIT 1)`,
+    `UPDATE tax_settings SET monthly_rate = ? WHERE id = (SELECT id FROM tax_settings ORDER BY updated_at DESC, id DESC LIMIT 1)`,
     [monthly_rate],
     function (err) {
       if (err) {
@@ -914,7 +914,7 @@ app.get("/api/admin/tax-settings", checkAdminAuth, (req, res) => {
            mecklenburg_sales, mecklenburg_occupancy,
            nc_state, mecklenburg_local, occupancy, updated_at
     FROM tax_settings
-    ORDER BY updated_at DESC
+    ORDER BY updated_at DESC, id DESC
     LIMIT 1
   `;
 
@@ -950,7 +950,7 @@ app.post("/api/admin/tax-settings", checkAdminAuth, (req, res) => {
     `SELECT nightly_rate, monthly_rate, cleaning_fee, minimum_nights,
             mecklenburg_sales, mecklenburg_occupancy
        FROM tax_settings
-       ORDER BY updated_at DESC
+       ORDER BY updated_at DESC, id DESC
        LIMIT 1`,
     [],
     (readErr, current) => {
