@@ -98,6 +98,8 @@ try {
   const bootstrapEnv = {
     ...process.env,
     RESERVATIONS_DB_PATH: bootstrapPath,
+    TAX_MECKLENBURG_SALES: "7.125",
+    TAX_MECKLENBURG_OCCUPANCY: "3.5",
   };
   delete bootstrapEnv.DATABASE_PATH;
 
@@ -144,52 +146,70 @@ try {
               process.exit(1);
             }
 
-            db.run(
-              "UPDATE tax_settings SET monthly_rate = ? WHERE id = (SELECT id FROM tax_settings ORDER BY updated_at DESC LIMIT 1)",
-              [1900],
-              function (rateErr) {
-                if (rateErr) {
-                  console.error(rateErr);
+            db.get(
+              "SELECT mecklenburg_sales, mecklenburg_occupancy FROM tax_settings ORDER BY updated_at DESC, id DESC LIMIT 1",
+              (taxErr, taxRow) => {
+                if (taxErr) {
+                  console.error(taxErr);
                   process.exit(1);
                 }
-                if (this.changes !== 1) {
-                  console.error("Fresh tax_settings row was not seeded");
+                if (
+                  !taxRow ||
+                  taxRow.mecklenburg_sales !== 7.125 ||
+                  taxRow.mecklenburg_occupancy !== 3.5
+                ) {
+                  console.error("Fresh tax_settings seed ignored configured tax rates");
                   process.exit(1);
                 }
 
-                db.get(
-                  "SELECT monthly_rate FROM tax_settings ORDER BY updated_at DESC LIMIT 1",
-                  (readRateErr, rateRow) => {
-                    if (readRateErr) {
-                      console.error(readRateErr);
+                db.run(
+                  "UPDATE tax_settings SET monthly_rate = ? WHERE id = (SELECT id FROM tax_settings ORDER BY updated_at DESC LIMIT 1)",
+                  [1900],
+                  function (rateErr) {
+                    if (rateErr) {
+                      console.error(rateErr);
                       process.exit(1);
                     }
-                    if (!rateRow || rateRow.monthly_rate !== 1900) {
-                      console.error("Monthly rate did not persist on a fresh database");
+                    if (this.changes !== 1) {
+                      console.error("Fresh tax_settings row was not seeded");
                       process.exit(1);
                     }
 
-                    db.run(
-                      "INSERT INTO bookings (checkIn, checkOut, bookingStatus, stripePaymentId, rental_type, guests) VALUES (?, ?, ?, ?, ?, ?)",
-                      [
-                        "2030-01-01",
-                        "2030-01-02",
-                        "confirmed",
-                        "pi_bootstrap_test",
-                        "short_stay",
-                        2,
-                      ],
-                      (insertErr) => {
-                        if (insertErr) {
-                          console.error(insertErr);
+                    db.get(
+                      "SELECT monthly_rate FROM tax_settings ORDER BY updated_at DESC LIMIT 1",
+                      (readRateErr, rateRow) => {
+                        if (readRateErr) {
+                          console.error(readRateErr);
                           process.exit(1);
                         }
-                        db.close((closeErr) => {
-                          if (closeErr) {
-                            console.error(closeErr);
-                            process.exit(1);
-                          }
-                        });
+                        if (!rateRow || rateRow.monthly_rate !== 1900) {
+                          console.error("Monthly rate did not persist on a fresh database");
+                          process.exit(1);
+                        }
+
+                        db.run(
+                          "INSERT INTO bookings (checkIn, checkOut, bookingStatus, stripePaymentId, rental_type, guests) VALUES (?, ?, ?, ?, ?, ?)",
+                          [
+                            "2030-01-01",
+                            "2030-01-02",
+                            "confirmed",
+                            "pi_bootstrap_test",
+                            "short_stay",
+                            2,
+                          ],
+                          (insertErr) => {
+                            if (insertErr) {
+                              console.error(insertErr);
+                              process.exit(1);
+                            }
+                            db.close((closeErr) => {
+                              if (closeErr) {
+                                console.error(closeErr);
+                                process.exit(1);
+                              }
+                            });
+                          },
+                        );
                       },
                     );
                   },
@@ -208,6 +228,7 @@ try {
   console.log("PASS: configured DB directory is created");
   console.log("PASS: data survives a process restart on the configured SQLite file");
   console.log("PASS: fresh database bootstrap creates the current bookings schema");
+  console.log("PASS: fresh database bootstrap honors configured tax rates");
   console.log("PASS: fresh database bootstrap seeds writable tax settings");
 } finally {
   fs.rmSync(tempRoot, { recursive: true, force: true });
