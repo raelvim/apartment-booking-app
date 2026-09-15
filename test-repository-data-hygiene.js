@@ -18,20 +18,45 @@ assert.ok(
   `${runtimeDbPath} must remain explicitly ignored`,
 );
 
-const gitCheck = spawnSync(
-  "git",
-  ["ls-files", "--error-unmatch", runtimeDbPath],
-  { cwd: repoRoot, encoding: "utf8" },
-);
+function runGit(args) {
+  const result = spawnSync("git", args, {
+    cwd: repoRoot,
+    encoding: "utf8",
+  });
 
-if (gitCheck.error && gitCheck.error.code === "ENOENT") {
-  throw new Error("git is required to verify repository data hygiene");
+  if (result.error) {
+    throw result.error;
+  }
+
+  return result;
 }
 
-assert.notStrictEqual(
-  gitCheck.status,
-  0,
-  `${runtimeDbPath} is still tracked by Git`,
+const trackedCheck = runGit([
+  "ls-files",
+  "--error-unmatch",
+  runtimeDbPath,
+]);
+
+assert.strictEqual(
+  trackedCheck.status,
+  1,
+  trackedCheck.status === 0
+    ? `${runtimeDbPath} is still tracked by Git`
+    : `git ls-files failed unexpectedly (status ${trackedCheck.status}): ${trackedCheck.stderr || trackedCheck.stdout}`,
 );
 
-console.log(`PASS: ${runtimeDbPath} is ignored and not tracked by Git`);
+const ignoreCheck = runGit([
+  "check-ignore",
+  "--no-index",
+  "--quiet",
+  "--",
+  runtimeDbPath,
+]);
+
+assert.strictEqual(
+  ignoreCheck.status,
+  0,
+  `Git does not currently ignore ${runtimeDbPath}: ${ignoreCheck.stderr || ignoreCheck.stdout}`,
+);
+
+console.log(`PASS: ${runtimeDbPath} is ignored by Git and is not tracked`);
