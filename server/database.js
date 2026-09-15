@@ -9,9 +9,17 @@ const {
 const dbPath = ensureDatabaseDirectory(resolveDatabasePath());
 
 // Creamos o abrimos la base de datos
+let resolvePricingReady;
+let rejectPricingReady;
+const pricingReady = new Promise((resolve, reject) => {
+  resolvePricingReady = resolve;
+  rejectPricingReady = reject;
+});
+
 const db = new sqlite3.Database(dbPath, (err) => {
   if (err) {
     console.error("Error al abrir la base de datos", err.message);
+    rejectPricingReady(err);
   } else {
     console.log(`Conectado a la base de datos SQLite: ${dbPath}`);
     // Creamos la tabla de reservas si no existe
@@ -165,10 +173,40 @@ const db = new sqlite3.Database(dbPath, (err) => {
         }
       },
     );
+
+    // This check is queued after the serialized migrations. Pricing endpoints
+    // wait for it so no request can observe a partially migrated schema.
+    db.all(`PRAGMA table_info(tax_settings)`, (schemaErr, rows) => {
+      if (schemaErr) {
+        rejectPricingReady(schemaErr);
+        return;
+      }
+      const columns = new Set(rows.map((row) => row.name));
+      const required = [
+        "nightly_rate",
+        "monthly_rate",
+        "cleaning_fee",
+        "minimum_nights",
+        "mecklenburg_sales",
+        "mecklenburg_occupancy",
+      ];
+      const missing = required.filter((column) => !columns.has(column));
+      if (missing.length > 0) {
+        rejectPricingReady(
+          new Error(`Pricing migration incomplete: ${missing.join(", ")}`),
+        );
+        return;
+      }
+      resolvePricingReady();
+    });
   }
 });
 
+// Preserve statement order during schema bootstrap and runtime transactions.
+db.serialize();
+
 // Expose the resolved path for diagnostics/tests without changing DB semantics.
 db.databasePath = dbPath;
+db.pricingReady = pricingReady;
 
 module.exports = db;
