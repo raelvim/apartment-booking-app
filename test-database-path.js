@@ -2,7 +2,7 @@ const assert = require("assert");
 const fs = require("fs");
 const os = require("os");
 const path = require("path");
-const { execFileSync, spawnSync } = require("child_process");
+const { execFileSync, spawn, spawnSync } = require("child_process");
 const {
   DEFAULT_DB_PATH,
   resolveDatabasePath,
@@ -127,6 +127,12 @@ try {
     path.join(__dirname, "server", "database.js"),
   );
 
+  const fallbackBeforeProductionFailure = fs.existsSync(DEFAULT_DB_PATH)
+    ? {
+        size: fs.statSync(DEFAULT_DB_PATH).size,
+        mtimeMs: fs.statSync(DEFAULT_DB_PATH).mtimeMs,
+      }
+    : null;
   const missingProductionPath = spawnSync(
     process.execPath,
     ["-e", `require(${databaseModule})`],
@@ -158,9 +164,214 @@ try {
     "production failure must explain the required persistent path",
   );
   assert.strictEqual(
-    fallbackAfterProductionFailure,
-    null,
-    "failed production startup must not create the local fallback database",
+    JSON.stringify(fallbackAfterProductionFailure),
+    JSON.stringify(fallbackBeforeProductionFailure),
+    "failed production startup must leave the local fallback database unchanged",
+  );
+
+  const invalidOpenPath = path.join(tempRoot, "database-is-a-directory");
+  fs.mkdirSync(invalidOpenPath);
+  const invalidOpen = spawnSync(
+    process.execPath,
+    [
+      "-e",
+      `require(${databaseModule}).ready.catch((err) => { console.error(err.message); process.exit(1); })`,
+    ],
+    {
+      cwd: __dirname,
+      env: {
+        ...process.env,
+        NODE_ENV: "production",
+        RESERVATIONS_DB_PATH: invalidOpenPath,
+      },
+      encoding: "utf8",
+    },
+  );
+  assert.notStrictEqual(
+    invalidOpen.status,
+    0,
+    "an invalid database path must fail bootstrap",
+  );
+  assert.match(
+    `${invalidOpen.stdout}${invalidOpen.stderr}`,
+    /SQLITE_CANTOPEN|unable to open database file/,
+  );
+  const invalidServer = spawnSync(process.execPath, ["server/index.js"], {
+    cwd: __dirname,
+    env: {
+      ...process.env,
+      NODE_ENV: "production",
+      PORT: "0",
+      ADMIN_PASSWORD: "isolated-invalid-db-test-only",
+      JWT_SECRET: "isolated-invalid-db-secret-only",
+      RESERVATIONS_DB_PATH: invalidOpenPath,
+    },
+    encoding: "utf8",
+    timeout: 5000,
+  });
+  const invalidServerOutput = `${invalidServer.stdout}${invalidServer.stderr}`;
+  assert.notStrictEqual(
+    invalidServer.status,
+    0,
+    "server startup must fail when SQLite cannot open",
+  );
+  assert.doesNotMatch(
+    invalidServerOutput,
+    /Server running on port/,
+    "server must not listen or expose healthy readiness after database failure",
+  );
+  assert.match(
+    invalidServerOutput,
+    /Database bootstrap failed|SQLITE_CANTOPEN/,
+  );
+
+  const incompatiblePath = path.join(
+    tempRoot,
+    "incompatible",
+    "reservations.db",
+  );
+  fs.mkdirSync(path.dirname(incompatiblePath), { recursive: true });
+  const incompatibleEnv = {
+    ...process.env,
+    RESERVATIONS_DB_PATH: incompatiblePath,
+  };
+  runNode(
+    `
+      const sqlite3 = require("sqlite3").verbose();
+      const db = new sqlite3.Database(process.env.RESERVATIONS_DB_PATH);
+      db.run("CREATE VIEW bookings AS SELECT 1 AS id", (err) => {
+        if (err) { console.error(err); process.exit(1); }
+        db.close();
+      });
+    `,
+    incompatibleEnv,
+  );
+  const incompatibleBootstrap = spawnSync(
+    process.execPath,
+    [
+      "-e",
+      `require(${databaseModule}).ready.catch((err) => { console.error(err.message); process.exit(1); })`,
+    ],
+    { cwd: __dirname, env: incompatibleEnv, encoding: "utf8" },
+  );
+  assert.notStrictEqual(
+    incompatibleBootstrap.status,
+    0,
+    "unexpected schema errors must fail bootstrap",
+  );
+  assert.match(
+    `${incompatibleBootstrap.stdout}${incompatibleBootstrap.stderr}`,
+    /bookings|views may not be indexed|view .* already exists/i,
+  );
+
+  const readOnlyPath = path.join(tempRoot, "read-only", "reservations.db");
+  fs.mkdirSync(path.dirname(readOnlyPath), { recursive: true });
+  const readOnlyEnv = { ...process.env, RESERVATIONS_DB_PATH: readOnlyPath };
+  runNode(
+    `
+      const db = require(${databaseModule});
+      db.ready.then(() => {
+        db.run("ALTER TABLE bookings DROP COLUMN guests", (err) => {
+          if (err) { console.error(err); process.exit(1); }
+          db.close();
+        });
+      });
+    `,
+    readOnlyEnv,
+  );
+  const readOnlyOptions = {
+    cwd: __dirname,
+    env: {
+      ...readOnlyEnv,
+      NODE_ENV: "test",
+      SQLITE_OPEN_READONLY_TEST_ONLY: "true",
+    },
+    encoding: "utf8",
+  };
+  const readOnlyBootstrap = spawnSync(
+    process.execPath,
+    [
+      "-e",
+      `require(${databaseModule}).ready.catch((err) => { console.error(err.message); process.exit(1); })`,
+    ],
+    readOnlyOptions,
+  );
+  assert.notStrictEqual(
+    readOnlyBootstrap.status,
+    0,
+    "a read-only database must fail bootstrap",
+  );
+  assert.match(
+    `${readOnlyBootstrap.stdout}${readOnlyBootstrap.stderr}`,
+    /readonly|READONLY/i,
+  );
+
+  const lockedPath = path.join(tempRoot, "locked", "reservations.db");
+  const lockReadyPath = path.join(tempRoot, "locked", "ready");
+  fs.mkdirSync(path.dirname(lockedPath), { recursive: true });
+  const lockHolder = spawn(
+    process.execPath,
+    [
+      "-e",
+      `
+        const fs = require("fs");
+        const sqlite3 = require("sqlite3").verbose();
+        const db = new sqlite3.Database(process.env.RESERVATIONS_DB_PATH);
+        db.run("BEGIN EXCLUSIVE", (err) => {
+          if (err) { console.error(err); process.exit(1); }
+          fs.writeFileSync(process.env.LOCK_READY_PATH, "ready");
+        });
+        const keepAlive = setInterval(() => {}, 1000);
+        process.on("SIGTERM", () => {
+          clearInterval(keepAlive);
+          db.run("ROLLBACK", () => db.close(() => process.exit(0)));
+        });
+      `,
+    ],
+    {
+      cwd: __dirname,
+      env: {
+        ...process.env,
+        RESERVATIONS_DB_PATH: lockedPath,
+        LOCK_READY_PATH: lockReadyPath,
+      },
+      stdio: ["ignore", "pipe", "pipe"],
+    },
+  );
+  const lockDeadline = Date.now() + 5000;
+  while (!fs.existsSync(lockReadyPath) && Date.now() < lockDeadline) {
+    Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 25);
+  }
+  assert.ok(
+    fs.existsSync(lockReadyPath),
+    "exclusive-lock fixture must become ready",
+  );
+  let lockedBootstrap;
+  try {
+    lockedBootstrap = spawnSync(
+      process.execPath,
+      [
+        "-e",
+        `const db=require(${databaseModule}); db.configure("busyTimeout", 50); db.ready.catch((err) => { console.error(err.message); process.exit(1); })`,
+      ],
+      {
+        cwd: __dirname,
+        env: { ...process.env, RESERVATIONS_DB_PATH: lockedPath },
+        encoding: "utf8",
+        timeout: 3000,
+      },
+    );
+  } finally {
+    lockHolder.kill("SIGTERM");
+  }
+  assert.notStrictEqual(
+    lockedBootstrap.status,
+    0,
+    "an exclusively locked database must fail bootstrap",
+  );
+  assert.match(
+    `${lockedBootstrap.stdout}${lockedBootstrap.stderr}`,
+    /locked|SQLITE_BUSY/i,
   );
 
   runNode(
@@ -380,12 +591,22 @@ try {
   console.log("PASS: default DB path remains local");
   console.log("PASS: configured DB path is honored");
   console.log("PASS: configured DB directory is created");
-  console.log("PASS: data survives a process restart on the configured SQLite file");
-  console.log("PASS: fresh database bootstrap creates the current bookings schema");
+  console.log(
+    "PASS: data survives a process restart on the configured SQLite file",
+  );
+  console.log(
+    "PASS: fresh database bootstrap creates the current bookings schema",
+  );
   console.log("PASS: fresh database bootstrap honors configured tax rates");
   console.log("PASS: fresh database bootstrap seeds writable tax settings");
   console.log("PASS: production fails fast without RESERVATIONS_DB_PATH");
-  console.log("PASS: populated legacy data survives idempotent bootstrap migration");
+  console.log("PASS: invalid SQLite open path fails bootstrap");
+  console.log("PASS: unexpected schema errors fail bootstrap");
+  console.log("PASS: read-only SQLite database fails bootstrap");
+  console.log("PASS: exclusively locked SQLite database fails bootstrap");
+  console.log(
+    "PASS: populated legacy data survives idempotent bootstrap migration",
+  );
 } finally {
   fs.rmSync(tempRoot, { recursive: true, force: true });
 }

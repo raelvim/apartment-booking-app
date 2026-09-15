@@ -12,19 +12,57 @@ const defaultMecklenburgSales =
 const defaultMecklenburgOccupancy =
   parseFloat(process.env.TAX_MECKLENBURG_OCCUPANCY) || 8.0;
 
-// Open the configured database and keep all statements serialized. Scheduling the
-// schema bootstrap immediately (rather than from the async open callback) ensures
-// every consumer of this module runs only after the bootstrap statements queued
-// below, including when the runtime database file does not exist yet.
-const db = new sqlite3.Database(dbPath, (err) => {
+let openError = null;
+let bootstrapError = null;
+let settleReady;
+
+// Consumers may queue work immediately, but the HTTP server waits for this
+// promise before listening. All bootstrap statements are queued synchronously in
+// serialized order and the final probe settles readiness only after they finish.
+const databaseOpenMode =
+  process.env.NODE_ENV === "test" &&
+  process.env.SQLITE_OPEN_READONLY_TEST_ONLY === "true"
+    ? sqlite3.OPEN_READONLY
+    : sqlite3.OPEN_READWRITE | sqlite3.OPEN_CREATE;
+const db = new sqlite3.Database(dbPath, databaseOpenMode, (err) => {
   if (err) {
+    openError = err;
     console.error("Error al abrir la base de datos", err.message);
+    if (settleReady) settleReady.reject(err);
   } else {
     console.log(`Conectado a la base de datos SQLite: ${dbPath}`);
   }
 });
 
 db.serialize();
+
+db.ready = new Promise((resolve, reject) => {
+  settleReady = { resolve, reject };
+});
+
+function recordBootstrapError(context, err) {
+  if (!err || bootstrapError) return;
+  bootstrapError = new Error(`${context}: ${err.message}`);
+  bootstrapError.cause = err;
+  console.error(bootstrapError.message);
+}
+
+function requiredStep(context) {
+  return (err) => recordBootstrapError(context, err);
+}
+
+function compatibilityColumn(table, column) {
+  return (err) => {
+    if (!err) return;
+    const duplicatePattern = new RegExp(
+      `^SQLITE_ERROR: duplicate column name: ${column}$`,
+      "i",
+    );
+    if (!duplicatePattern.test(err.message)) {
+      recordBootstrapError(`Error al migrar ${table}.${column}`, err);
+    }
+  };
+}
 
 // Current bookings schema for a brand-new database. The ALTER statements below
 // remain as compatibility migrations for databases created by older versions.
@@ -38,22 +76,14 @@ db.run(
     rental_type TEXT DEFAULT 'short_stay',
     guests INTEGER DEFAULT 2
 )`,
-  (err) => {
-    if (err) {
-      console.error("Error al crear la tabla", err.message);
-    }
-  },
+  requiredStep("Error al crear la tabla bookings"),
 );
 
 // Evita reservas duplicadas si el webhook y el navegador confirman el mismo pago
 db.run(
   `CREATE UNIQUE INDEX IF NOT EXISTS idx_bookings_stripe_payment_id
    ON bookings(stripePaymentId) WHERE stripePaymentId IS NOT NULL`,
-  (err) => {
-    if (err) {
-      console.error("Error al crear el índice único", err.message);
-    }
-  },
+  requiredStep("Error al crear el índice único"),
 );
 
 // Fechas bloqueadas importadas desde calendarios externos (ej. Airbnb)
@@ -66,11 +96,7 @@ db.run(
     checkOut TEXT NOT NULL,
     UNIQUE(source, uid)
 )`,
-  (err) => {
-    if (err) {
-      console.error("Error al crear la tabla external_blocks", err.message);
-    }
-  },
+  requiredStep("Error al crear la tabla external_blocks"),
 );
 
 // Current tax schema for a brand-new database. Compatibility ALTER migrations
@@ -87,46 +113,42 @@ db.run(
     monthly_rate REAL DEFAULT 1800,
     nightly_rate REAL DEFAULT 150
 )`,
-  (err) => {
-    if (err) {
-      console.error("Error al crear la tabla tax_settings", err.message);
-    }
-  },
+  requiredStep("Error al crear la tabla tax_settings"),
 );
 
 // Migración: agregar columnas de impuestos Mecklenburg actualizados
 // Ventas: 8.25%, Ocupación: 8.00%
 db.run(
   `ALTER TABLE tax_settings ADD COLUMN mecklenburg_sales REAL DEFAULT 8.25`,
-  () => {}, // ignora error si la columna ya existe
+  compatibilityColumn("tax_settings", "mecklenburg_sales"),
 );
 db.run(
   `ALTER TABLE tax_settings ADD COLUMN mecklenburg_occupancy REAL DEFAULT 8.00`,
-  () => {}, // ignora error si la columna ya existe
+  compatibilityColumn("tax_settings", "mecklenburg_occupancy"),
 );
 
 // Migración: agregar columna de tipo de reserva (short_stay / monthly)
 db.run(
   `ALTER TABLE bookings ADD COLUMN rental_type TEXT DEFAULT 'short_stay'`,
-  () => {}, // ignora error si la columna ya existe
+  compatibilityColumn("bookings", "rental_type"),
 );
 
 // Migración: agregar columna de tarifa mensual en tax_settings
 db.run(
   `ALTER TABLE tax_settings ADD COLUMN monthly_rate REAL DEFAULT 1800`,
-  () => {}, // ignora error si la columna ya existe
+  compatibilityColumn("tax_settings", "monthly_rate"),
 );
 
 // Migración: agregar columna de tarifa por noche en tax_settings
 db.run(
   `ALTER TABLE tax_settings ADD COLUMN nightly_rate REAL DEFAULT 150`,
-  () => {}, // ignora error si la columna ya existe
+  compatibilityColumn("tax_settings", "nightly_rate"),
 );
 
 // Migración: número de huéspedes por reserva
 db.run(
   `ALTER TABLE bookings ADD COLUMN guests INTEGER DEFAULT 2`,
-  () => {}, // ignora error si la columna ya existe
+  compatibilityColumn("bookings", "guests"),
 );
 
 // A fresh or otherwise empty database needs one settings row because the admin
@@ -149,11 +171,7 @@ db.run(
   SELECT 0, 0, 0, datetime('now'), ?, ?, 1800, 150
   WHERE NOT EXISTS (SELECT 1 FROM tax_settings)`,
   [defaultMecklenburgSales, defaultMecklenburgOccupancy],
-  (err) => {
-    if (err) {
-      console.error("Error al inicializar tax_settings", err.message);
-    }
-  },
+  requiredStep("Error al inicializar tax_settings"),
 );
 
 // Bloqueos temporales de fechas mientras el pago está en curso.
@@ -170,11 +188,7 @@ db.run(
     expires_at TEXT NOT NULL,
     created_at TEXT DEFAULT (datetime('now'))
 )`,
-  (err) => {
-    if (err) {
-      console.error("Error al crear la tabla booking_holds", err.message);
-    }
-  },
+  requiredStep("Error al crear la tabla booking_holds"),
 );
 
 // Cobros manuales (facturas enviadas a clientes)
@@ -190,12 +204,19 @@ db.run(
     created_at TEXT DEFAULT (datetime('now')),
     paid_at TEXT
 )`,
-  (err) => {
-    if (err) {
-      console.error("Error al crear la tabla manual_charges", err.message);
-    }
-  },
+  requiredStep("Error al crear la tabla manual_charges"),
 );
+
+// This probe is last in the serialized queue. Readiness is successful only when
+// opening the file and every required schema/index/seed operation succeeded.
+db.get("SELECT 1 AS ready", (probeError) => {
+  const failure = openError || bootstrapError || probeError;
+  if (failure) {
+    settleReady.reject(failure);
+  } else {
+    settleReady.resolve();
+  }
+});
 
 // Expose the resolved path for diagnostics/tests without changing DB semantics.
 db.databasePath = dbPath;

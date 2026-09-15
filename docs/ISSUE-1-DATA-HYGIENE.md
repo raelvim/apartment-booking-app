@@ -73,6 +73,7 @@ Before final technical approval, the reviewer must run from a fresh checkout of 
 npm ci
 npm run test:data-hygiene
 npm run test:persistence
+npm run test:booking
 npm run test:webhook
 ```
 

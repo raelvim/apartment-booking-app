@@ -8,8 +8,8 @@ const { spawn } = require("child_process");
 
 const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "booking-flow-"));
 const testDbPath = path.join(tempRoot, "reservations.db");
-const testPort = 31000 + Math.floor(Math.random() * 1000);
-const API = `http://127.0.0.1:${testPort}`;
+let testPort = null;
+let API = null;
 process.env.RESERVATIONS_DB_PATH = testDbPath;
 const db = new sqlite3.Database(testDbPath);
 const serverProcess = spawn(process.execPath, ["server/index.js"], {
@@ -20,11 +20,11 @@ const serverProcess = spawn(process.execPath, ["server/index.js"], {
     MOCK_PAYMENTS: "true",
     ADMIN_PASSWORD: "isolated-booking-flow-test-only",
     JWT_SECRET: "isolated-booking-flow-secret-only",
-    DOMAIN: `http://127.0.0.1:${testPort}`,
-    PORT: String(testPort),
+    DOMAIN: "http://127.0.0.1",
+    PORT: "0",
     RESERVATIONS_DB_PATH: testDbPath,
   },
-  stdio: ["ignore", "pipe", "pipe"],
+  stdio: ["ignore", "pipe", "pipe", "ipc"],
 });
 
 let serverOutput = "";
@@ -37,14 +37,21 @@ async function waitForServer() {
     if (serverProcess.exitCode !== null) {
       throw new Error(`Isolated server exited early:\n${serverOutput}`);
     }
-    try {
+    if (testPort !== null) {
+      API = `http://127.0.0.1:${testPort}`;
       const response = await fetch(`${API}/health`);
       if (response.ok) return;
-    } catch {}
+    }
     await new Promise((resolve) => setTimeout(resolve, 100));
   }
   throw new Error(`Timed out waiting for isolated server:\n${serverOutput}`);
 }
+
+serverProcess.on("message", (message) => {
+  if (message && message.type === "server-listening") {
+    testPort = message.port;
+  }
+});
 
 function closeDatabase() {
   return new Promise((resolve) => db.close(() => resolve()));
@@ -337,7 +344,9 @@ function dbRun(sql, params = []) {
 
   console.log(`\n===== RESULTADO: ${passed} pasaron, ${failed} fallaron =====`);
   process.exitCode = failed > 0 ? 1 : 0;
-})().catch((e) => {
-  console.error("Error en las pruebas:", e);
-  process.exitCode = 1;
-}).finally(cleanup);
+})()
+  .catch((e) => {
+    console.error("Error en las pruebas:", e);
+    process.exitCode = 1;
+  })
+  .finally(cleanup);
