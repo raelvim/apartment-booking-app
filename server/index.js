@@ -12,6 +12,11 @@ const WebSocket = require("ws");
 const ical = require("node-ical");
 
 const db = require("./database.js");
+const {
+  DEFAULT_PRICING,
+  normalizePricingRow,
+  mergePricingSettings,
+} = require("./pricing-settings.js");
 
 // Stripe se inicializa solo si hay clave real; en modo mock no se necesita.
 let stripe = null;
@@ -29,11 +34,9 @@ const STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET;
 const AIRBNB_ICAL_URL = process.env.AIRBNB_ICAL_URL;
 
 // Reglas tarifarias activas (los importes monetarios reales se leen de la DB)
-const MIN_NIGHTS = 10;
 const MAX_NIGHTS = 365; // techo razonable para una estancia corta
 const MAX_GUESTS = 6;
 const MAX_ADVANCE_MONTHS = 18; // nadie puede reservar a más de 18 meses vista
-const CLEANING_FEE = parseFloat(process.env.CLEANING_FEE) || 0;
 const HOLD_MINUTES = 35; // un poco más que la expiración de la sesión de Stripe (30 min)
 
 // Modo de prueba sin Stripe real: nunca se activa en producción, aunque la variable quede puesta por error.
@@ -141,9 +144,8 @@ const checkAdminAuth = (req, res, next) => {
  */
 function getTaxConfig() {
   return {
-    mecklenburg_sales: parseFloat(process.env.TAX_MECKLENBURG_SALES) || 8.25,
-    mecklenburg_occupancy:
-      parseFloat(process.env.TAX_MECKLENBURG_OCCUPANCY) || 8.0,
+    mecklenburg_sales: DEFAULT_PRICING.mecklenburg_sales,
+    mecklenburg_occupancy: DEFAULT_PRICING.mecklenburg_occupancy,
   };
 }
 
@@ -154,7 +156,7 @@ function getTaxConfig() {
 function calculateTotalPrice(
   nights,
   pricePerNight,
-  cleaningFee = CLEANING_FEE,
+  cleaningFee = DEFAULT_PRICING.cleaning_fee,
   taxRates = null,
 ) {
   if (!taxRates) taxRates = getTaxConfig();
@@ -259,7 +261,8 @@ function loadTaxSettingsFromDB(callback) {
  */
 function loadRatesFromDB(callback) {
   const sql = `
-    SELECT nightly_rate, monthly_rate, mecklenburg_sales, mecklenburg_occupancy
+    SELECT nightly_rate, monthly_rate, cleaning_fee, minimum_nights,
+           mecklenburg_sales, mecklenburg_occupancy
     FROM tax_settings
     ORDER BY updated_at DESC
     LIMIT 1
@@ -267,22 +270,9 @@ function loadRatesFromDB(callback) {
   db.get(sql, [], (err, row) => {
     if (err) {
       console.error("Error loading rates:", err);
-      return callback({
-        nightly_rate: 150,
-        monthly_rate: 1800,
-        ...getTaxConfig(),
-      });
+      return callback({ ...DEFAULT_PRICING });
     }
-    callback({
-      nightly_rate: row && row.nightly_rate != null ? row.nightly_rate : 150,
-      monthly_rate: row && row.monthly_rate != null ? row.monthly_rate : 1800,
-      mecklenburg_sales:
-        row && row.mecklenburg_sales != null ? row.mecklenburg_sales : 8.25,
-      mecklenburg_occupancy:
-        row && row.mecklenburg_occupancy != null
-          ? row.mecklenburg_occupancy
-          : 8.0,
-    });
+    callback(normalizePricingRow(row));
   });
 }
 
@@ -488,13 +478,13 @@ app.post("/api/calculate-price", (req, res) => {
         .status(400)
         .json({ error: "Missing or invalid check-in/check-out dates" });
     }
-    if (nights < MIN_NIGHTS) {
+    if (nights < rates.minimum_nights) {
       return res
         .status(400)
-        .json({ error: `Minimum stay is ${MIN_NIGHTS} nights` });
+        .json({ error: `Minimum stay is ${rates.minimum_nights} nights` });
     }
     res.json(
-      calculateTotalPrice(nights, rates.nightly_rate, CLEANING_FEE, rates),
+      calculateTotalPrice(nights, rates.nightly_rate, rates.cleaning_fee, rates),
     );
   });
 });
@@ -567,11 +557,7 @@ app.post("/api/create-checkout-session", checkoutLimiter, async (req, res) => {
         error: `Bookings can only be made up to ${MAX_ADVANCE_MONTHS} months in advance`,
       });
     }
-    if (nights < MIN_NIGHTS) {
-      return res
-        .status(400)
-        .json({ error: `Minimum stay is ${MIN_NIGHTS} nights` });
-    }
+    // The effective minimum is checked after loading the authoritative DB row.
     if (nights > MAX_NIGHTS) {
       return res
         .status(400)
