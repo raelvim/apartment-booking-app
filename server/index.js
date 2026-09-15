@@ -569,10 +569,20 @@ app.post("/api/create-checkout-session", checkoutLimiter, async (req, res) => {
   try {
     // Tarifas e impuestos desde la base de datos del servidor
     const rates = await new Promise((resolve) => loadRatesFromDB(resolve));
+    if (rental_type !== "monthly" && nights < rates.minimum_nights) {
+      return res
+        .status(400)
+        .json({ error: `Minimum stay is ${rates.minimum_nights} nights` });
+    }
     const pricing =
       rental_type === "monthly"
         ? calculateMonthlyPrice(monthsInt, rates.monthly_rate, rates)
-        : calculateTotalPrice(nights, rates.nightly_rate, CLEANING_FEE, rates);
+        : calculateTotalPrice(
+            nights,
+            rates.nightly_rate,
+            rates.cleaning_fee,
+            rates,
+          );
 
     // Validar que el importe final sea válido y mayor que cero
     if (!pricing.total || pricing.total <= 0) {
