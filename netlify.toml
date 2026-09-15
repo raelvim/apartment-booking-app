@@ -2,6 +2,12 @@
   publish = "public"
   command = ""
 
+[[redirects]]
+  from = "/api/*"
+  to = "https://escapelakenorman-api-l2da.onrender.com/api/:splat"
+  status = 200
+  force = true
+
 [[headers]]
   for = "/*"
   [headers.values]
