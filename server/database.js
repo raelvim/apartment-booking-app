@@ -65,6 +65,12 @@ const db = new sqlite3.Database(dbPath, (err) => {
     nc_state REAL NOT NULL,
     mecklenburg_local REAL NOT NULL,
     occupancy REAL NOT NULL,
+    mecklenburg_sales REAL DEFAULT 8.25,
+    mecklenburg_occupancy REAL DEFAULT 8.00,
+    nightly_rate REAL DEFAULT 150,
+    monthly_rate REAL DEFAULT 1800,
+    cleaning_fee REAL DEFAULT 0,
+    minimum_nights INTEGER DEFAULT 10,
     updated_at TEXT NOT NULL
 )`,
       (err) => {
