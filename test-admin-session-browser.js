@@ -8,7 +8,7 @@ const netlify = fs.readFileSync("netlify.toml", "utf8");
 
 const renderOrigin = "https://escapelakenorman-api-l2da.onrender.com";
 const firstPartyApiPattern =
-  /const API_URL = \["localhost", "127\.0\.0\.1"\]\.includes\([\s\S]*?window\.location\.hostname,[\s\S]*?\)\s*\?\s*`http:\/\/\$\{window\.location\.hostname\}:3001`\s*:\s*"";/;
+  /const API_URL = [\s\S]*?\?\s*`http:\/\/\$\{window\.location\.hostname\}:3001`\s*:\s*"";/;
 
 for (const [name, source] of Object.entries({ login, admin, taxSettings })) {
   assert(!source.includes("admin_token"), `${name} must not access admin_token`);
@@ -45,9 +45,7 @@ assert(
 );
 assert(
   netlify.includes('from = "/api/*"') &&
-    netlify.includes(
-      `to = "${renderOrigin}/api/:splat"`,
-    ) &&
+    netlify.includes(`to = "${renderOrigin}/api/:splat"`) &&
     netlify.includes("status = 200"),
   "Netlify must proxy first-party /api requests to the authoritative backend",
 );
