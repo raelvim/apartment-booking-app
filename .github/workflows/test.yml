@@ -7,32 +7,13 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
       - run: npm ci
-      - name: Configure test environment
-        run: |
-          cat > server/.env <<'EOF'
-          ADMIN_PASSWORD=test-admin-password
-          JWT_SECRET=test-jwt-secret-for-ci-only
-          PORT=3001
-          NODE_ENV=development
-          DOMAIN=http://localhost:3001
-          ALLOWED_ORIGINS=http://localhost:3001
-          MOCK_PAYMENTS=true
-          CLEANING_FEE=0
-          EOF
-      - name: Start test server
-        run: |
-          node server/index.js > /tmp/apartment-booking-app.log 2>&1 &
-          echo $! > /tmp/apartment-booking-app.pid
-          sleep 3
       - name: Run test suite
         run: npm test
-      - name: Show server log on failure
-        if: failure()
-        run: cat /tmp/apartment-booking-app.log

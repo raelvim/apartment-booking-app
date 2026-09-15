@@ -1,10 +1,11 @@
 // Pruebas obligatorias de los 3 puntos corregidos (contra MOCK_PAYMENTS)
 // Uso: node test-booking-flow.js  (requiere el servidor corriendo en :3001)
 const API = "http://localhost:3001";
+const API_URL = process.env.TEST_API_URL || API;
 const sqlite3 = require("sqlite3").verbose();
-const path = require("path");
+const { resolveDatabasePath } = require("./server/database-path");
 const db = new sqlite3.Database(
-  path.join(__dirname, "server", "reservations.db"),
+  resolveDatabasePath(),
 );
 
 let passed = 0;
@@ -23,6 +24,12 @@ function check(name, cond, detail = "") {
 function addDays(dateStr, n) {
   const d = new Date(`${dateStr}T00:00:00Z`);
   d.setUTCDate(d.getUTCDate() + n);
+  return d.toISOString().split("T")[0];
+}
+
+function addMonths(dateStr, months) {
+  const d = new Date(`${dateStr}T00:00:00Z`);
+  d.setUTCMonth(d.getUTCMonth() + months);
   return d.toISOString().split("T")[0];
 }
 
@@ -48,7 +55,7 @@ function markOccupied(from, to) {
 }
 
 async function post(p, body) {
-  const r = await fetch(`${API}${p}`, {
+  const r = await fetch(`${API_URL}${p}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
@@ -76,7 +83,7 @@ function dbRun(sql, params = []) {
   // Cada punto usa una ventana separada (en días desde hoy) para que las
   // reservas de prueba nunca se solapen entre sí, y nextFreeDate salta
   // cualquier bloqueo dejado por corridas anteriores.
-  const blocked = await (await fetch(`${API}/api/bookings`)).json();
+  const blocked = await (await fetch(`${API_URL}/api/bookings`)).json();
   global.__occupied = blocked;
   console.log(`Rangos ocupados actuales: ${blocked.length}`);
 
@@ -277,7 +284,12 @@ function dbRun(sql, params = []) {
   );
   check(
     "check-out mensual calculado por el servidor",
-    m2.body.pricing && s1.body && true,
+    m2.status === 200 &&
+      (await dbAll(
+        `SELECT checkOut FROM booking_holds WHERE stripe_session_id = ?`,
+        [m2.body.id],
+      ))[0]?.checkOut === addMonths(addDays(ci3, 75), 3),
+    `check-out esperado=${addMonths(addDays(ci3, 75), 3)}`,
   );
 
   console.log(`\n===== RESULTADO: ${passed} pasaron, ${failed} fallaron =====`);

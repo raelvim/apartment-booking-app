@@ -1,34 +1,34 @@
 # Render Blueprint - Backend de Lakeside Serenity (escapelakenorman-api)
 #
-# Cómo usarlo con el cliente:
-#   1. Sube este archivo al repo (raíz).
-#   2. En Render: New > Blueprint > conecta el repo.
-#   3. Render pedirá rellenar las variables marcadas con sync: false
-#      (las secretas: contraseña de admin, claves de Stripe, etc.).
-#   4. Deploy. La URL resultante será algo como
-#      https://escapelakenorman-api.onrender.com (ya configurada en el frontend).
+# URL activa:
+#   https://escapelakenorman-api-l2da.onrender.com
 #
-# IMPORTANTE (SQLite): este servicio usa reservations.db en disco. En el plan
-# gratuito el disco es EFÍMERO (se borra en cada redeploy/restart). El disco
-# persistente de abajo (1 GB) lo mantiene, pero requiere plan de pago (~$7/mes).
-# Alternativa gratuita a futuro: migrar a Postgres (Render Postgres free).
+# SQLite persistence rollout (Issue #23):
+#   1. BEFORE any deploy/Blueprint sync, inventory and back up the current live
+#      server/reservations.db off-service. The current filesystem is ephemeral.
+#   2. This Blueprint declares a dedicated 1 GB persistent disk at /var/data.
+#   3. RESERVATIONS_DB_PATH is intentionally NOT managed by this Blueprint.
+#      After the current DB has been restored/copied to
+#      /var/data/reservations.db and verified, set RESERVATIONS_DB_PATH manually
+#      in the Render Dashboard to /var/data/reservations.db and redeploy.
+#      Omitting it here prevents a later Blueprint sync from silently resetting
+#      the cutover value.
+#   4. Follow docs/ISSUE-23-RENDER-SQLITE-CUTOVER.md for verification/rollback.
 
 services:
   - type: web
     name: escapelakenorman-api
     runtime: node
-    plan: free
+    plan: 0.5c-512mb
     buildCommand: npm install
     startCommand: node server/index.js
     healthCheckPath: /health
 
-    # Disco persistente para SQLite (comentado: requiere plan de pago).
-    # Descomenta si el cliente acepta el plan paid; si no, la DB se reinicia
-    # en cada deploy (aceptable SOLO mientras se prueba).
-    # disk:
-    #   name: escapelakenorman-data
-    #   mountPath: /opt/render/project/src/server
-    #   sizeGB: 1
+    # Dedicated persistent data volume. Never mount over application source.
+    disk:
+      name: escapelakenorman-data
+      mountPath: /var/data
+      sizeGB: 1
 
     envVars:
       - key: NODE_ENV
@@ -36,11 +36,14 @@ services:
       - key: PORT
         value: 3001
 
-      # Frontend (Netlify): de aquí salen success.html / cancel.html
+      # Frontend (Netlify): de aquí salen success.html / cancel.html.
+      # DOMAIN es la versión "canónica" del sitio (a donde Stripe redirige).
       - key: DOMAIN
-        value: https://escapelakenorman.com
+        value: https://www.escapelakenorman.com
+      # CORS: lista separada por comas con TODOS los orígenes válidos
+      # (raíz y www, porque Netlify suele responder en ambos).
       - key: ALLOWED_ORIGINS
-        value: https://escapelakenorman.com
+        value: https://escapelakenorman.com,https://www.escapelakenorman.com
 
       # Seguridad: el servidor NO arranca sin estas dos (process.exit)
       - key: ADMIN_PASSWORD

@@ -6,7 +6,9 @@
   "scripts": {
     "start": "node server/index.js",
     "dev": "node server/index.js",
-    "test": "node test-security.js && node test-booking-flow.js"
+    "test": "node test-database-path.js && node test-stripe-webhook-durability.js && node test-runner.js",
+    "test:persistence": "node test-database-path.js",
+    "test:webhook": "node test-stripe-webhook-durability.js"
   },
   "keywords": [],
   "author": "",
