@@ -2,7 +2,7 @@ const assert = require("assert");
 const fs = require("fs");
 const os = require("os");
 const path = require("path");
-const { execFileSync } = require("child_process");
+const { execFileSync, spawnSync } = require("child_process");
 const {
   DEFAULT_DB_PATH,
   resolveDatabasePath,
@@ -21,12 +21,32 @@ const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "booking-db-path-"));
 const configuredPath = path.join(tempRoot, "nested", "reservations.db");
 const legacyPath = path.join(tempRoot, "legacy", "reservations.db");
 const bootstrapPath = path.join(tempRoot, "bootstrap", "reservations.db");
+const populatedLegacyPath = path.join(
+  tempRoot,
+  "populated-legacy",
+  "reservations.db",
+);
 
 try {
   assert.strictEqual(
     resolveDatabasePath({}),
     DEFAULT_DB_PATH,
     "local fallback must remain server/reservations.db",
+  );
+
+  assert.throws(
+    () => resolveDatabasePath({ NODE_ENV: "production" }),
+    /RESERVATIONS_DB_PATH is required in production/,
+    "production must fail fast without an explicit persistent database path",
+  );
+
+  assert.strictEqual(
+    resolveDatabasePath({
+      NODE_ENV: "production",
+      RESERVATIONS_DB_PATH: configuredPath,
+    }),
+    path.resolve(configuredPath),
+    "production must honor an explicit persistent database path",
   );
 
   assert.strictEqual(
@@ -105,6 +125,42 @@ try {
 
   const databaseModule = JSON.stringify(
     path.join(__dirname, "server", "database.js"),
+  );
+
+  const missingProductionPath = spawnSync(
+    process.execPath,
+    ["-e", `require(${databaseModule})`],
+    {
+      cwd: __dirname,
+      env: {
+        ...process.env,
+        NODE_ENV: "production",
+        RESERVATIONS_DB_PATH: "",
+        DATABASE_PATH: "",
+      },
+      encoding: "utf8",
+    },
+  );
+  const fallbackAfterProductionFailure = fs.existsSync(DEFAULT_DB_PATH)
+    ? {
+        size: fs.statSync(DEFAULT_DB_PATH).size,
+        mtimeMs: fs.statSync(DEFAULT_DB_PATH).mtimeMs,
+      }
+    : null;
+  assert.notStrictEqual(
+    missingProductionPath.status,
+    0,
+    "database bootstrap must refuse production without RESERVATIONS_DB_PATH",
+  );
+  assert.match(
+    `${missingProductionPath.stdout}${missingProductionPath.stderr}`,
+    /RESERVATIONS_DB_PATH is required in production/,
+    "production failure must explain the required persistent path",
+  );
+  assert.strictEqual(
+    fallbackAfterProductionFailure,
+    null,
+    "failed production startup must not create the local fallback database",
   );
 
   runNode(
@@ -223,6 +279,104 @@ try {
     bootstrapEnv,
   );
 
+  const legacyEnv = {
+    ...process.env,
+    RESERVATIONS_DB_PATH: populatedLegacyPath,
+    TAX_MECKLENBURG_SALES: "9.9",
+    TAX_MECKLENBURG_OCCUPANCY: "8.8",
+  };
+  delete legacyEnv.DATABASE_PATH;
+
+  fs.mkdirSync(path.dirname(populatedLegacyPath), { recursive: true });
+  runNode(
+    `
+      const sqlite3 = require("sqlite3").verbose();
+      const db = new sqlite3.Database(process.env.RESERVATIONS_DB_PATH);
+      db.serialize(() => {
+        db.run(\`CREATE TABLE bookings (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          checkIn TEXT NOT NULL,
+          checkOut TEXT NOT NULL,
+          bookingStatus TEXT,
+          stripePaymentId TEXT
+        )\`);
+        db.run(
+          "INSERT INTO bookings (id, checkIn, checkOut, bookingStatus, stripePaymentId) VALUES (?, ?, ?, ?, ?)",
+          [41, "2031-06-10", "2031-06-20", "confirmed", "pi_legacy_sentinel"]
+        );
+        db.run(\`CREATE TABLE tax_settings (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          nc_state REAL NOT NULL,
+          mecklenburg_local REAL NOT NULL,
+          occupancy REAL NOT NULL,
+          updated_at TEXT NOT NULL
+        )\`);
+        db.run(
+          "INSERT INTO tax_settings (id, nc_state, mecklenburg_local, occupancy, updated_at) VALUES (?, ?, ?, ?, ?)",
+          [17, 4.75, 2.25, 6.5, "2024-01-02 03:04:05"]
+        );
+      });
+      db.close((err) => {
+        if (err) { console.error(err); process.exit(1); }
+      });
+    `,
+    legacyEnv,
+  );
+
+  const verifyLegacyMigration = () =>
+    runNode(
+      `
+        const db = require(${databaseModule});
+        db.serialize(() => {
+          db.all("SELECT * FROM bookings", (bookingErr, bookings) => {
+            if (bookingErr) throw bookingErr;
+            if (bookings.length !== 1) {
+              throw new Error("Legacy booking row count changed during migration");
+            }
+            const booking = bookings[0];
+            if (!booking || booking.checkIn !== "2031-06-10" ||
+                booking.checkOut !== "2031-06-20" ||
+                booking.bookingStatus !== "confirmed" ||
+                booking.stripePaymentId !== "pi_legacy_sentinel") {
+              throw new Error("Legacy booking values were not preserved");
+            }
+            if (booking.rental_type !== "short_stay" || booking.guests !== 2) {
+              throw new Error("Legacy booking compatibility columns were not added");
+            }
+            db.all("SELECT * FROM tax_settings", (taxErr, rows) => {
+              if (taxErr) throw taxErr;
+              if (rows.length !== 1) throw new Error("Legacy tax settings row was duplicated");
+              const tax = rows[0];
+              if (tax.id !== 17 || tax.nc_state !== 4.75 ||
+                  tax.mecklenburg_local !== 2.25 || tax.occupancy !== 6.5 ||
+                  tax.updated_at !== "2024-01-02 03:04:05") {
+                throw new Error("Legacy tax settings values were not preserved");
+              }
+              if (tax.mecklenburg_sales !== 8.25 ||
+                  tax.mecklenburg_occupancy !== 8 ||
+                  tax.monthly_rate !== 1800 || tax.nightly_rate !== 150) {
+                throw new Error("Legacy tax compatibility columns were not added");
+              }
+              db.get(
+                "SELECT name FROM sqlite_master WHERE type = 'index' AND name = 'idx_bookings_stripe_payment_id'",
+                (indexErr, indexRow) => {
+                  if (indexErr) throw indexErr;
+                  if (!indexRow) throw new Error("Legacy database unique index was not created");
+                  db.close((closeErr) => {
+                    if (closeErr) throw closeErr;
+                  });
+                },
+              );
+            });
+          });
+        });
+      `,
+      legacyEnv,
+    );
+
+  verifyLegacyMigration();
+  verifyLegacyMigration();
+
   console.log("PASS: default DB path remains local");
   console.log("PASS: configured DB path is honored");
   console.log("PASS: configured DB directory is created");
@@ -230,6 +384,8 @@ try {
   console.log("PASS: fresh database bootstrap creates the current bookings schema");
   console.log("PASS: fresh database bootstrap honors configured tax rates");
   console.log("PASS: fresh database bootstrap seeds writable tax settings");
+  console.log("PASS: production fails fast without RESERVATIONS_DB_PATH");
+  console.log("PASS: populated legacy data survives idempotent bootstrap migration");
 } finally {
   fs.rmSync(tempRoot, { recursive: true, force: true });
 }

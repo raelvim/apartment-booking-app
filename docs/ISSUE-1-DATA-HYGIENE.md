@@ -13,6 +13,8 @@ The runtime database must never be a repository artifact. This issue removes `se
 
 For local development, the application may still fall back to `server/reservations.db`. `server/database.js` creates/opens the file and initializes the required tables at runtime, so a pre-populated database file does not need to be committed.
 
+In `NODE_ENV=production`, there is deliberately no local fallback: startup fails before opening a database unless `RESERVATIONS_DB_PATH` is set. This prevents a missing Render variable from silently sending bookings to the ephemeral application filesystem. The path remains manually owned in Render so a Blueprint sync cannot overwrite the existing persistent-disk value.
+
 ## Existing persistence work reused from Issue #23
 
 Issue #1 does not duplicate the completed production cutover work:
