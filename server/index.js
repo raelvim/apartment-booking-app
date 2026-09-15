@@ -225,45 +225,7 @@ function calculateMonthlyPrice(months, monthlyRate, taxRates = null) {
  * Intenta usar las nuevas columnas mecklenburg_sales/mecklenburg_occupancy;
  * si no existen (base de datos antigua), cae a los defaults.
  */
-function loadTaxSettingsFromDB(callback) {
-  const sql = `
-    SELECT mecklenburg_sales, mecklenburg_occupancy,
-           nc_state, mecklenburg_local, occupancy
-    FROM tax_settings 
-    ORDER BY updated_at DESC, id DESC 
-    LIMIT 1
-  `;
-
-  db.get(sql, [], (err, row) => {
-    if (err) {
-      console.error("Error loading tax settings:", err);
-      callback(getTaxConfig());
-      return;
-    }
-
-    if (row) {
-      // Preferir columnas nuevas; si son null (DB vieja), usar defaults
-      callback({
-        mecklenburg_sales:
-          row.mecklenburg_sales != null
-            ? row.mecklenburg_sales
-            : DEFAULT_PRICING.mecklenburg_sales,
-        mecklenburg_occupancy:
-          row.mecklenburg_occupancy != null
-            ? row.mecklenburg_occupancy
-            : DEFAULT_PRICING.mecklenburg_occupancy,
-      });
-    } else {
-      callback(getTaxConfig());
-    }
-  });
-}
-
-/**
- * Carga tarifas e impuestos desde la base de datos del servidor.
- * Esta es la ÚNICA fuente de precios: nunca se usan valores enviados por el navegador.
- */
-function loadRatesFromDB(callback) {
+function getLatestPricingRow() {
   const sql = `
     SELECT nightly_rate, monthly_rate, cleaning_fee, minimum_nights,
            mecklenburg_sales, mecklenburg_occupancy
@@ -271,13 +233,60 @@ function loadRatesFromDB(callback) {
     ORDER BY updated_at DESC, id DESC
     LIMIT 1
   `;
-  db.get(sql, [], (err, row) => {
-    if (err) {
-      console.error("Error loading rates:", err);
-      return callback({ ...DEFAULT_PRICING });
-    }
-    callback(normalizePricingRow(row));
+  return db.pricingReady.then(
+    () =>
+      new Promise((resolve, reject) => {
+        db.get(sql, [], (err, row) => (err ? reject(err) : resolve(row)));
+      }),
+  );
+}
+
+/**
+ * Carga tarifas e impuestos desde la base de datos del servidor.
+ * Esta es la ÚNICA fuente de precios: nunca se usan valores enviados por el navegador.
+ * Database errors propagate so checkout fails closed instead of charging defaults.
+ */
+async function loadRatesFromDB() {
+  return normalizePricingRow(await getLatestPricingRow());
+}
+
+async function loadTaxSettingsFromDB() {
+  const rates = await loadRatesFromDB();
+  return {
+    mecklenburg_sales: rates.mecklenburg_sales,
+    mecklenburg_occupancy: rates.mecklenburg_occupancy,
+  };
+}
+
+let pricingUpdateQueue = Promise.resolve();
+
+function savePricingSettings(updates) {
+  const operation = pricingUpdateQueue.then(async () => {
+    const pricing = mergePricingSettings(await getLatestPricingRow(), updates);
+    await new Promise((resolve, reject) => {
+      db.run(
+        `INSERT INTO tax_settings (
+           nc_state, mecklenburg_local, occupancy,
+           nightly_rate, monthly_rate, cleaning_fee, minimum_nights,
+           mecklenburg_sales, mecklenburg_occupancy, updated_at
+         ) VALUES (0, 0, 0, ?, ?, ?, ?, ?, ?, datetime('now'))`,
+        [
+          pricing.nightly_rate,
+          pricing.monthly_rate,
+          pricing.cleaning_fee,
+          pricing.minimum_nights,
+          pricing.mecklenburg_sales,
+          pricing.mecklenburg_occupancy,
+        ],
+        (err) => (err ? reject(err) : resolve()),
+      );
+    });
+    return pricing;
   });
+
+  // Keep the queue usable after a rejected validation or database operation.
+  pricingUpdateQueue = operation.catch(() => {});
+  return operation;
 }
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -451,19 +460,23 @@ app.get("/api/bookings", (req, res) => {
 });
 
 // Endpoint para obtener tasas de impuestos actuales
-app.get("/api/tax-rates", (req, res) => {
-  loadTaxSettingsFromDB((rates) => {
-    res.json(rates);
-  });
+app.get("/api/tax-rates", async (req, res) => {
+  try {
+    res.json(await loadTaxSettingsFromDB());
+  } catch (err) {
+    console.error("Error loading tax settings:", err);
+    res.status(503).json({ error: "Pricing configuration unavailable" });
+  }
 });
 
 // Endpoint para calcular precio total (con impuestos).
 // Las tarifas se leen SIEMPRE de la base de datos del servidor; cualquier
 // pricePerNight/monthly_rate/subtotal/total enviado por el navegador se ignora.
-app.post("/api/calculate-price", (req, res) => {
+app.post("/api/calculate-price", async (req, res) => {
   const { checkIn, checkOut, rental_type, months } = req.body;
 
-  loadRatesFromDB((rates) => {
+  try {
+    const rates = await loadRatesFromDB();
     // Arriendo mensual
     if (rental_type === "monthly") {
       const monthsInt = parseInt(months, 10);
@@ -490,7 +503,10 @@ app.post("/api/calculate-price", (req, res) => {
     res.json(
       calculateTotalPrice(nights, rates.nightly_rate, rates.cleaning_fee, rates),
     );
-  });
+  } catch (err) {
+    console.error("Error loading rates:", err);
+    res.status(503).json({ error: "Pricing configuration unavailable" });
+  }
 });
 
 // Endpoint para crear sesión de pago Stripe.
@@ -572,7 +588,7 @@ app.post("/api/create-checkout-session", checkoutLimiter, async (req, res) => {
   let holdId = null;
   try {
     // Tarifas e impuestos desde la base de datos del servidor
-    const rates = await new Promise((resolve) => loadRatesFromDB(resolve));
+    const rates = await loadRatesFromDB();
     if (rental_type !== "monthly" && nights < rates.minimum_nights) {
       return res
         .status(400)
@@ -846,96 +862,63 @@ app.delete("/api/admin/bookings/:id", checkAdminAuth, (req, res) => {
 // ============ MONTHLY RATE ENDPOINTS ============
 
 // Compatibility endpoints backed by the same complete pricing snapshot.
-app.get("/api/monthly-rate", (req, res) => {
-  loadRatesFromDB((rates) => res.json({ monthly_rate: rates.monthly_rate }));
+app.get("/api/monthly-rate", async (req, res) => {
+  try {
+    const rates = await loadRatesFromDB();
+    res.json({ monthly_rate: rates.monthly_rate });
+  } catch (err) {
+    console.error("Error loading monthly rate:", err);
+    res.status(503).json({ error: "Pricing configuration unavailable" });
+  }
 });
 
-app.get("/api/admin/monthly-rate", checkAdminAuth, (req, res) => {
-  loadRatesFromDB((rates) => res.json({ monthly_rate: rates.monthly_rate }));
+app.get("/api/admin/monthly-rate", checkAdminAuth, async (req, res) => {
+  try {
+    const rates = await loadRatesFromDB();
+    res.json({ monthly_rate: rates.monthly_rate });
+  } catch (err) {
+    console.error("Error loading monthly rate:", err);
+    res.status(503).json({ error: "Pricing configuration unavailable" });
+  }
 });
 
-app.post("/api/admin/monthly-rate", checkAdminAuth, (req, res) => {
+app.post("/api/admin/monthly-rate", checkAdminAuth, async (req, res) => {
   const { monthly_rate } = req.body;
-
-  db.get(
-    `SELECT nightly_rate, monthly_rate, cleaning_fee, minimum_nights,
-            mecklenburg_sales, mecklenburg_occupancy
-       FROM tax_settings
-       ORDER BY updated_at DESC, id DESC
-       LIMIT 1`,
-    [],
-    (readErr, current) => {
-      if (readErr) {
-        return res.status(500).json({ error: readErr.message });
-      }
-
-      let pricing;
-      try {
-        pricing = mergePricingSettings(current, { monthly_rate });
-      } catch (validationError) {
-        return res.status(400).json({ error: validationError.message });
-      }
-
-      db.run(
-        `INSERT INTO tax_settings (
-           nc_state, mecklenburg_local, occupancy,
-           nightly_rate, monthly_rate, cleaning_fee, minimum_nights,
-           mecklenburg_sales, mecklenburg_occupancy, updated_at
-         ) VALUES (0, 0, 0, ?, ?, ?, ?, ?, ?, datetime('now'))`,
-        [
-          pricing.nightly_rate,
-          pricing.monthly_rate,
-          pricing.cleaning_fee,
-          pricing.minimum_nights,
-          pricing.mecklenburg_sales,
-          pricing.mecklenburg_occupancy,
-        ],
-        function (writeErr) {
-          if (writeErr) {
-            return res.status(500).json({ error: writeErr.message });
-          }
-          broadcastAdminUpdate();
-          res.json({ message: "Monthly rate updated", monthly_rate });
-        },
-      );
-    },
-  );
+  if (monthly_rate === undefined || monthly_rate === null) {
+    return res.status(400).json({ error: "Invalid monthly rate" });
+  }
+  try {
+    const pricing = await savePricingSettings({ monthly_rate });
+    broadcastAdminUpdate();
+    res.json({
+      message: "Monthly rate updated",
+      monthly_rate: pricing.monthly_rate,
+    });
+  } catch (err) {
+    if (err instanceof TypeError) {
+      return res.status(400).json({ error: err.message });
+    }
+    console.error("Error saving monthly rate:", err);
+    res.status(500).json({ error: "Unable to save pricing configuration" });
+  }
 });
 
 // ============ TAX SETTINGS ENDPOINTS ============
 
 // Obtener configuración de impuestos Mecklenburg
-app.get("/api/admin/tax-settings", checkAdminAuth, (req, res) => {
-  const sql = `
-    SELECT id, nightly_rate, monthly_rate, cleaning_fee, minimum_nights,
-           mecklenburg_sales, mecklenburg_occupancy,
-           nc_state, mecklenburg_local, occupancy, updated_at
-    FROM tax_settings
-    ORDER BY updated_at DESC, id DESC
-    LIMIT 1
-  `;
-
-  db.get(sql, [], (err, row) => {
-    if (err) {
-      return res.status(500).json({ error: err.message });
-    }
-
-    if (row) {
-      res.json({
-        id: row.id,
-        ...normalizePricingRow(row),
-        updated_at: row.updated_at,
-      });
-    } else {
-      res.json({ ...DEFAULT_PRICING });
-    }
-  });
+app.get("/api/admin/tax-settings", checkAdminAuth, async (req, res) => {
+  try {
+    res.json(await loadRatesFromDB());
+  } catch (err) {
+    console.error("Error loading admin pricing settings:", err);
+    res.status(503).json({ error: "Pricing configuration unavailable" });
+  }
 });
 
 // Actualizar la configuración tarifaria completa. Los campos omitidos se
 // conservan desde la última fila para que un cambio de impuestos nunca
 // restablezca silenciosamente la tarifa nocturna.
-app.post("/api/admin/tax-settings", checkAdminAuth, (req, res) => {
+app.post("/api/admin/tax-settings", checkAdminAuth, async (req, res) => {
   if (
     req.body.mecklenburg_sales === undefined ||
     req.body.mecklenburg_occupancy === undefined
@@ -943,58 +926,17 @@ app.post("/api/admin/tax-settings", checkAdminAuth, (req, res) => {
     return res.status(400).json({ error: "Missing tax rates" });
   }
 
-  db.get(
-    `SELECT nightly_rate, monthly_rate, cleaning_fee, minimum_nights,
-            mecklenburg_sales, mecklenburg_occupancy
-       FROM tax_settings
-       ORDER BY updated_at DESC, id DESC
-       LIMIT 1`,
-    [],
-    (readErr, current) => {
-      if (readErr) {
-        return res.status(500).json({ error: readErr.message });
-      }
-
-      let pricing;
-      try {
-        pricing = mergePricingSettings(current, req.body);
-      } catch (validationError) {
-        return res.status(400).json({ error: validationError.message });
-      }
-
-      const sql = `
-        INSERT INTO tax_settings (
-          nc_state, mecklenburg_local, occupancy,
-          nightly_rate, monthly_rate, cleaning_fee, minimum_nights,
-          mecklenburg_sales, mecklenburg_occupancy, updated_at
-        )
-        VALUES (0, 0, 0, ?, ?, ?, ?, ?, ?, datetime('now'))
-      `;
-
-      db.run(
-        sql,
-        [
-          pricing.nightly_rate,
-          pricing.monthly_rate,
-          pricing.cleaning_fee,
-          pricing.minimum_nights,
-          pricing.mecklenburg_sales,
-          pricing.mecklenburg_occupancy,
-        ],
-        function (writeErr) {
-          if (writeErr) {
-            return res.status(500).json({ error: writeErr.message });
-          }
-          broadcastAdminUpdate();
-          res.json({
-            message: "Pricing settings updated",
-            id: this.lastID,
-            ...pricing,
-          });
-        },
-      );
-    },
-  );
+  try {
+    const pricing = await savePricingSettings(req.body);
+    broadcastAdminUpdate();
+    res.json({ message: "Pricing settings updated", ...pricing });
+  } catch (err) {
+    if (err instanceof TypeError) {
+      return res.status(400).json({ error: err.message });
+    }
+    console.error("Error saving pricing settings:", err);
+    res.status(500).json({ error: "Unable to save pricing configuration" });
+  }
 });
 
 // ============ MANUAL BILLING ENDPOINTS ============
