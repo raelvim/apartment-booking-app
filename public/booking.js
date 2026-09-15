@@ -1,7 +1,7 @@
 // booking.js - Calendario con fechas bloqueadas por Airbnb/Bookings
 // NOTA DE SEGURIDAD: los precios los calcula SIEMPRE el servidor.
 // Este script solo envía fechas, número de huéspedes y tipo de reserva.
-const PROD_API_URL = "https://escapelakenorman-api.onrender.com";
+const PROD_API_URL = "https://escapelakenorman-api-l2da.onrender.com";
 const API_URL = ["localhost", "127.0.0.1"].includes(window.location.hostname)
   ? `http://${window.location.hostname}:3001`
   : PROD_API_URL;

@@ -5,7 +5,11 @@
   "main": "server/index.js",
   "scripts": {
     "start": "node server/index.js",
-    "dev": "node server/index.js"
+    "dev": "node server/index.js",
+    "test:persistence": "node test-database-path.js",
+    "test:booking": "node test-booking-flow.js",
+    "test:webhook": "node test-stripe-webhook-durability.js",
+    "test:data-hygiene": "node test-repository-data-hygiene.js"
   },
   "keywords": [],
   "author": "",
