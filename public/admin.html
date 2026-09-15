@@ -261,6 +261,9 @@
         <a href="tax-settings.html" class="btn-tax-settings">
           <i class="fas fa-cog"></i> Configure Tax Rates
         </a>
+        <button type="button" id="btn-logout" class="btn-tax-settings">
+          <i class="fas fa-sign-out-alt"></i> Logout
+        </button>
       </div>
 
       <div class="bookings-section">
@@ -390,23 +393,17 @@
     </div>
 
     <script>
-      // El frontend (Netlify) y el backend viven en dominios distintos.
-      // TODO: reemplazar por la URL real una vez desplegado el backend (Render/Railway/etc).
-      const PROD_API_URL = "https://escapelakenorman-api-l2da.onrender.com";
-      const API_URL = ["localhost", "127.0.0.1"].includes(
+      const PROD_WS_URL = "https://escapelakenorman-api-l2da.onrender.com";
+      const IS_LOCAL = ["localhost", "127.0.0.1"].includes(
         window.location.hostname,
-      )
+      );
+      const API_URL = IS_LOCAL
         ? `http://${window.location.hostname}:3001`
-        : PROD_API_URL;
+        : "";
+      const WS_API_URL = IS_LOCAL ? API_URL : PROD_WS_URL;
 
       document.addEventListener("DOMContentLoaded", () => {
         // --- VERIFICACIÓN Y REFERENCIAS ---
-        const token = localStorage.getItem("admin_token");
-        if (!token) {
-          window.location.href = "login.html";
-          return;
-        }
-
         const activeTbody = document.getElementById("active-bookings-tbody");
         const pastTbody = document.getElementById("past-bookings-tbody");
         const noActiveMsg = document.getElementById("no-active-bookings");
@@ -414,7 +411,7 @@
 
         // --- WEBSOCKET ---
         const wsProtocol = window.location.protocol === "https:" ? "wss" : "ws";
-        const wsUrl = `${wsProtocol}://${API_URL.replace(/^https?:\/\//, "")}`;
+        const wsUrl = `${wsProtocol}://${WS_API_URL.replace(/^https?:\/\//, "")}`;
         let socket = null;
 
         function connectWebSocket() {
@@ -455,17 +452,32 @@
         async function fetchWithAuth(url, options = {}) {
           const headers = {
             ...options.headers,
-            Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
           };
-          const response = await fetch(url, { ...options, headers });
+          const response = await fetch(url, {
+            ...options,
+            headers,
+            credentials: "include",
+          });
           if (response.status === 401 || response.status === 403) {
-            localStorage.removeItem("admin_token");
             window.location.href = "login.html";
             throw new Error("Session expired or invalid.");
           }
           return response;
         }
+
+        document
+          .getElementById("btn-logout")
+          .addEventListener("click", async () => {
+            try {
+              await fetch(`${API_URL}/api/admin/logout`, {
+                method: "POST",
+                credentials: "include",
+              });
+            } finally {
+              window.location.href = "login.html";
+            }
+          });
 
         function createRow(booking) {
           const tr = document.createElement("tr");
