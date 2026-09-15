@@ -910,7 +910,8 @@ app.post("/api/admin/monthly-rate", checkAdminAuth, (req, res) => {
 // Obtener configuración de impuestos Mecklenburg
 app.get("/api/admin/tax-settings", checkAdminAuth, (req, res) => {
   const sql = `
-    SELECT id, mecklenburg_sales, mecklenburg_occupancy, monthly_rate,
+    SELECT id, nightly_rate, monthly_rate, cleaning_fee, minimum_nights,
+           mecklenburg_sales, mecklenburg_occupancy,
            nc_state, mecklenburg_local, occupancy, updated_at
     FROM tax_settings
     ORDER BY updated_at DESC
@@ -925,50 +926,76 @@ app.get("/api/admin/tax-settings", checkAdminAuth, (req, res) => {
     if (row) {
       res.json({
         id: row.id,
-        mecklenburg_sales:
-          row.mecklenburg_sales != null ? row.mecklenburg_sales : 8.25,
-        mecklenburg_occupancy:
-          row.mecklenburg_occupancy != null ? row.mecklenburg_occupancy : 8.0,
-        monthly_rate: row.monthly_rate != null ? row.monthly_rate : 1800,
+        ...normalizePricingRow(row),
         updated_at: row.updated_at,
       });
     } else {
-      res.json({ ...getTaxConfig(), monthly_rate: 1800 });
+      res.json({ ...DEFAULT_PRICING });
     }
   });
 });
 
-// Actualizar configuración de impuestos Mecklenburg
+// Actualizar la configuración tarifaria completa. Los campos omitidos se
+// conservan desde la última fila para que un cambio de impuestos nunca
+// restablezca silenciosamente la tarifa nocturna.
 app.post("/api/admin/tax-settings", checkAdminAuth, (req, res) => {
-  const { mecklenburg_sales, mecklenburg_occupancy, monthly_rate } = req.body;
-
-  if (mecklenburg_sales === undefined || mecklenburg_occupancy === undefined) {
+  if (
+    req.body.mecklenburg_sales === undefined ||
+    req.body.mecklenburg_occupancy === undefined
+  ) {
     return res.status(400).json({ error: "Missing tax rates" });
   }
 
-  const effectiveMonthlyRate = monthly_rate != null ? monthly_rate : 1800;
-
-  // Mantener columnas antiguas con valores por defecto para compatibilidad
-  const sql = `
-    INSERT INTO tax_settings (nc_state, mecklenburg_local, occupancy, mecklenburg_sales, mecklenburg_occupancy, monthly_rate, updated_at)
-    VALUES (0, 0, 0, ?, ?, ?, datetime('now'))
-  `;
-
-  db.run(
-    sql,
-    [mecklenburg_sales, mecklenburg_occupancy, effectiveMonthlyRate],
-    function (err) {
-      if (err) {
-        return res.status(500).json({ error: err.message });
+  db.get(
+    `SELECT nightly_rate, monthly_rate, cleaning_fee, minimum_nights,
+            mecklenburg_sales, mecklenburg_occupancy
+       FROM tax_settings
+       ORDER BY updated_at DESC
+       LIMIT 1`,
+    [],
+    (readErr, current) => {
+      if (readErr) {
+        return res.status(500).json({ error: readErr.message });
       }
-      broadcastAdminUpdate();
-      res.json({
-        message: "Tax settings updated",
-        id: this.lastID,
-        mecklenburg_sales,
-        mecklenburg_occupancy,
-        monthly_rate: effectiveMonthlyRate,
-      });
+
+      let pricing;
+      try {
+        pricing = mergePricingSettings(current, req.body);
+      } catch (validationError) {
+        return res.status(400).json({ error: validationError.message });
+      }
+
+      const sql = `
+        INSERT INTO tax_settings (
+          nc_state, mecklenburg_local, occupancy,
+          nightly_rate, monthly_rate, cleaning_fee, minimum_nights,
+          mecklenburg_sales, mecklenburg_occupancy, updated_at
+        )
+        VALUES (0, 0, 0, ?, ?, ?, ?, ?, ?, datetime('now'))
+      `;
+
+      db.run(
+        sql,
+        [
+          pricing.nightly_rate,
+          pricing.monthly_rate,
+          pricing.cleaning_fee,
+          pricing.minimum_nights,
+          pricing.mecklenburg_sales,
+          pricing.mecklenburg_occupancy,
+        ],
+        function (writeErr) {
+          if (writeErr) {
+            return res.status(500).json({ error: writeErr.message });
+          }
+          broadcastAdminUpdate();
+          res.json({
+            message: "Pricing settings updated",
+            id: this.lastID,
+            ...pricing,
+          });
+        },
+      );
     },
   );
 });
