@@ -20,6 +20,7 @@ function runNode(script, env) {
 const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "booking-db-path-"));
 const configuredPath = path.join(tempRoot, "nested", "reservations.db");
 const legacyPath = path.join(tempRoot, "legacy", "reservations.db");
+const bootstrapPath = path.join(tempRoot, "bootstrap", "reservations.db");
 
 try {
   assert.strictEqual(
@@ -94,10 +95,90 @@ try {
     "configured SQLite file must retain data across separate Node processes",
   );
 
+  const bootstrapEnv = {
+    ...process.env,
+    RESERVATIONS_DB_PATH: bootstrapPath,
+  };
+  delete bootstrapEnv.DATABASE_PATH;
+
+  const databaseModule = JSON.stringify(
+    path.join(__dirname, "server", "database.js"),
+  );
+
+  runNode(
+    `
+      const db = require(${databaseModule});
+      const requiredColumns = [
+        "id",
+        "checkIn",
+        "checkOut",
+        "bookingStatus",
+        "stripePaymentId",
+        "rental_type",
+        "guests",
+      ];
+
+      db.all("PRAGMA table_info(bookings)", (err, rows) => {
+        if (err) {
+          console.error(err);
+          process.exit(1);
+        }
+
+        const columns = new Set(rows.map((row) => row.name));
+        for (const column of requiredColumns) {
+          if (!columns.has(column)) {
+            console.error("Missing bookings column: " + column);
+            process.exit(1);
+          }
+        }
+
+        db.get(
+          "SELECT name FROM sqlite_master WHERE type = 'index' AND name = 'idx_bookings_stripe_payment_id'",
+          (indexErr, indexRow) => {
+            if (indexErr) {
+              console.error(indexErr);
+              process.exit(1);
+            }
+            if (!indexRow) {
+              console.error("Missing idx_bookings_stripe_payment_id");
+              process.exit(1);
+            }
+
+            db.run(
+              "INSERT INTO bookings (checkIn, checkOut, bookingStatus, stripePaymentId, rental_type, guests) VALUES (?, ?, ?, ?, ?, ?)",
+              [
+                "2030-01-01",
+                "2030-01-02",
+                "confirmed",
+                "pi_bootstrap_test",
+                "short_stay",
+                2,
+              ],
+              (insertErr) => {
+                if (insertErr) {
+                  console.error(insertErr);
+                  process.exit(1);
+                }
+                db.close((closeErr) => {
+                  if (closeErr) {
+                    console.error(closeErr);
+                    process.exit(1);
+                  }
+                });
+              },
+            );
+          },
+        );
+      });
+    `,
+    bootstrapEnv,
+  );
+
   console.log("PASS: default DB path remains local");
   console.log("PASS: configured DB path is honored");
   console.log("PASS: configured DB directory is created");
   console.log("PASS: data survives a process restart on the configured SQLite file");
+  console.log("PASS: fresh database bootstrap creates the current bookings schema");
 } finally {
   fs.rmSync(tempRoot, { recursive: true, force: true });
 }
