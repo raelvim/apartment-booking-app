@@ -61,6 +61,21 @@ A future Postgres migration should be a separate issue and include:
 - rollback/cutover steps and a verified backup;
 - application tests against an isolated Postgres database before production migration.
 
+## Pre-merge verification gate
+
+Repository-wide CI enforcement is tracked separately under the testing/CI backlog and is intentionally not expanded into this data-hygiene issue. Until that CI exists, PR #33 uses an explicit manual pre-merge gate.
+
+Before final technical approval, the reviewer must run from a fresh checkout of the exact candidate head:
+
+```bash
+npm ci
+npm run test:data-hygiene
+npm run test:persistence
+npm run test:webhook
+```
+
+The reviewer must also confirm a safe server startup and `/health` check using isolated/non-production database configuration. `test:data-hygiene` must fail if the runtime DB or supported SQLite sidecars become tracked or cease to be ignored by Git. The exact head SHA and command results must be recorded in the PR review evidence before merge authorization can be requested.
+
 ## Rollback / safety
 
 No production database is deleted or modified by this repository cleanup. Production continues using `/var/data/reservations.db` through `RESERVATIONS_DB_PATH`.
