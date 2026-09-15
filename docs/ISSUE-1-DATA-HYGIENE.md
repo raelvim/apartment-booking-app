@@ -9,7 +9,7 @@ Production remains on the persistent Render SQLite database introduced by Issue 
 - configuration: `RESERVATIONS_DB_PATH=/var/data/reservations.db`
 - persistent disk mount: `/var/data`
 
-The runtime database must never be a repository artifact. This issue removes `server/reservations.db` from the active Git tree while keeping the existing `.gitignore` rule.
+The runtime database must never be a repository artifact. This issue removes `server/reservations.db` from the active Git tree while keeping ignore protection for the database and its SQLite sidecar files.
 
 For local development, the application may still fall back to `server/reservations.db`. `server/database.js` creates/opens the file and initializes the required tables at runtime, so a pre-populated database file does not need to be committed.
 
@@ -20,7 +20,7 @@ Issue #1 does not duplicate the completed production cutover work:
 - `server/database-path.js` provides a configurable SQLite path with the local fallback.
 - `render.yaml` declares the paid service and dedicated 1 GB `/var/data` disk.
 - `docs/ISSUE-23-RENDER-SQLITE-CUTOVER.md` contains backup, integrity, migration and rollback guidance.
-- production has already been verified using `/var/data/reservations.db` across a service restart.
+- production persistence at `/var/data/reservations.db` was verified across a restart/redeploy with the same recorded database state. The original pre-cutover off-service backup sequence was not completed before the first automatic deployment, so preservation of any runtime-only data that may have existed only in the prior ephemeral database cannot be proven retrospectively.
 
 ## Git-history review
 
@@ -40,7 +40,7 @@ No verified production guest PII or secret was identified from the repository-vi
 This change performs the safe non-destructive remediation now:
 
 1. Remove `server/reservations.db` from the current branch.
-2. Keep `server/reservations.db` in `.gitignore`.
+2. Keep `server/reservations.db` and SQLite sidecars such as `server/reservations.db-journal`, `server/reservations.db-wal` and `server/reservations.db-shm` ignored through `server/reservations.db-*`.
 3. Keep production data only on the Render persistent disk, not in Git.
 4. Keep local/test database creation isolated and runtime-generated.
 
