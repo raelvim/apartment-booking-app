@@ -393,14 +393,14 @@
     </div>
 
     <script>
-      // El frontend (Netlify) y el backend viven en dominios distintos.
-      // TODO: reemplazar por la URL real una vez desplegado el backend (Render/Railway/etc).
-      const PROD_API_URL = "https://escapelakenorman-api-l2da.onrender.com";
-      const API_URL = ["localhost", "127.0.0.1"].includes(
+      const PROD_WS_URL = "https://escapelakenorman-api-l2da.onrender.com";
+      const IS_LOCAL = ["localhost", "127.0.0.1"].includes(
         window.location.hostname,
-      )
+      );
+      const API_URL = IS_LOCAL
         ? `http://${window.location.hostname}:3001`
-        : PROD_API_URL;
+        : "";
+      const WS_API_URL = IS_LOCAL ? API_URL : PROD_WS_URL;
 
       document.addEventListener("DOMContentLoaded", () => {
         // --- VERIFICACIÓN Y REFERENCIAS ---
@@ -411,7 +411,7 @@
 
         // --- WEBSOCKET ---
         const wsProtocol = window.location.protocol === "https:" ? "wss" : "ws";
-        const wsUrl = `${wsProtocol}://${API_URL.replace(/^https?:\/\//, "")}`;
+        const wsUrl = `${wsProtocol}://${WS_API_URL.replace(/^https?:\/\//, "")}`;
         let socket = null;
 
         function connectWebSocket() {
