@@ -9,9 +9,20 @@ const {
 const dbPath = ensureDatabaseDirectory(resolveDatabasePath());
 
 // Creamos o abrimos la base de datos
+let resolvePricingReady;
+let rejectPricingReady;
+const pricingReady = new Promise((resolve, reject) => {
+  resolvePricingReady = resolve;
+  rejectPricingReady = reject;
+});
+pricingReady.catch((err) => {
+  console.error("Pricing schema is not ready:", err.message);
+});
+
 const db = new sqlite3.Database(dbPath, (err) => {
   if (err) {
     console.error("Error al abrir la base de datos", err.message);
+    rejectPricingReady(err);
   } else {
     console.log(`Conectado a la base de datos SQLite: ${dbPath}`);
     // Creamos la tabla de reservas si no existe
@@ -65,6 +76,12 @@ const db = new sqlite3.Database(dbPath, (err) => {
     nc_state REAL NOT NULL,
     mecklenburg_local REAL NOT NULL,
     occupancy REAL NOT NULL,
+    mecklenburg_sales REAL DEFAULT 8.25,
+    mecklenburg_occupancy REAL DEFAULT 8.00,
+    nightly_rate REAL DEFAULT 150,
+    monthly_rate REAL DEFAULT 1800,
+    cleaning_fee REAL DEFAULT 0,
+    minimum_nights INTEGER DEFAULT 10,
     updated_at TEXT NOT NULL
 )`,
       (err) => {
@@ -100,6 +117,16 @@ const db = new sqlite3.Database(dbPath, (err) => {
     // Migración: agregar columna de tarifa por noche en tax_settings
     db.run(
       `ALTER TABLE tax_settings ADD COLUMN nightly_rate REAL DEFAULT 150`,
+      () => {}, // ignora error si la columna ya existe
+    );
+
+    // Migración: completar la configuración tarifaria centralizada.
+    db.run(
+      `ALTER TABLE tax_settings ADD COLUMN cleaning_fee REAL DEFAULT 0`,
+      () => {}, // ignora error si la columna ya existe
+    );
+    db.run(
+      `ALTER TABLE tax_settings ADD COLUMN minimum_nights INTEGER DEFAULT 10`,
       () => {}, // ignora error si la columna ya existe
     );
 
@@ -149,10 +176,40 @@ const db = new sqlite3.Database(dbPath, (err) => {
         }
       },
     );
+
+    // This check is queued after the serialized migrations. Pricing endpoints
+    // wait for it so no request can observe a partially migrated schema.
+    db.all(`PRAGMA table_info(tax_settings)`, (schemaErr, rows) => {
+      if (schemaErr) {
+        rejectPricingReady(schemaErr);
+        return;
+      }
+      const columns = new Set(rows.map((row) => row.name));
+      const required = [
+        "nightly_rate",
+        "monthly_rate",
+        "cleaning_fee",
+        "minimum_nights",
+        "mecklenburg_sales",
+        "mecklenburg_occupancy",
+      ];
+      const missing = required.filter((column) => !columns.has(column));
+      if (missing.length > 0) {
+        rejectPricingReady(
+          new Error(`Pricing migration incomplete: ${missing.join(", ")}`),
+        );
+        return;
+      }
+      resolvePricingReady();
+    });
   }
 });
 
+// Preserve statement order during schema bootstrap and runtime transactions.
+db.serialize();
+
 // Expose the resolved path for diagnostics/tests without changing DB semantics.
 db.databasePath = dbPath;
+db.pricingReady = pricingReady;
 
 module.exports = db;
