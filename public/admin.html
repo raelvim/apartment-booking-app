@@ -257,7 +257,7 @@
   <body>
     <div class="admin-container">
       <div class="admin-header">
-        <h1 class="admin-title">📅 Booking Management</h1>
+        <h1 class="admin-title">ð Booking Management</h1>
         <a href="tax-settings.html" class="btn-tax-settings">
           <i class="fas fa-cog"></i> Configure Tax Rates
         </a>
@@ -400,7 +400,7 @@
         : PROD_API_URL;
 
       document.addEventListener("DOMContentLoaded", () => {
-        // --- VERIFICACIÓN Y REFERENCIAS ---
+        // --- VERIFICACIÃN Y REFERENCIAS ---
         const token = localStorage.getItem("admin_token");
         if (!token) {
           window.location.href = "login.html";
@@ -467,6 +467,16 @@
           return response;
         }
 
+          // Escapa texto antes de meterlo en innerHTML (evita XSS almacenado)
+          function escapeHtml(value) {
+            return String(value ?? "")
+              .replace(/&/g, "&amp;")
+              .replace(/</g, "&lt;")
+              .replace(/>/g, "&gt;")
+              .replace(/"/g, "&quot;")
+              .replace(/'/g, "&#39;");
+          }
+
         function createRow(booking) {
           const tr = document.createElement("tr");
           const statusClass = `status-${booking.bookingStatus}`;
@@ -479,16 +489,6 @@
             booking.rental_type === "monthly"
               ? `<span style="background:#667eea;color:white;padding:2px 8px;border-radius:4px;font-size:11px;">Monthly</span>`
               : `<span style="background:#95a5a6;color:white;padding:2px 8px;border-radius:4px;font-size:11px;">Short Stay</span>`;
-
-          // Escapa texto antes de meterlo en innerHTML (evita XSS almacenado)
-          function escapeHtml(value) {
-            return String(value ?? "")
-              .replace(/&/g, "&amp;")
-              .replace(/</g, "&lt;")
-              .replace(/>/g, "&gt;")
-              .replace(/"/g, "&quot;")
-              .replace(/'/g, "&#39;");
-          }
 
           tr.innerHTML = `
                 <td>${booking.id}</td>
@@ -549,7 +549,7 @@
           }
         }
 
-        // --- LÓGICA DE CLICS EN BOTONES ---
+        // --- LÃGICA DE CLICS EN BOTONES ---
         document
           .querySelector(".admin-container")
           .addEventListener("click", async (e) => {
