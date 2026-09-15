@@ -467,15 +467,15 @@
           return response;
         }
 
-          // Escapa texto antes de meterlo en innerHTML (evita XSS almacenado)
-          function escapeHtml(value) {
-            return String(value ?? "")
-              .replace(/&/g, "&amp;")
-              .replace(/</g, "&lt;")
-              .replace(/>/g, "&gt;")
-              .replace(/"/g, "&quot;")
-              .replace(/'/g, "&#39;");
-          }
+        // Escapa texto antes de meterlo en innerHTML (evita XSS almacenado)
+        function escapeHtml(value) {
+          return String(value ?? "")
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#39;");
+        }
 
         function createRow(booking) {
           const tr = document.createElement("tr");
