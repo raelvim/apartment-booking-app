@@ -261,6 +261,12 @@ document.addEventListener("DOMContentLoaded", () => {
       (checkOutDate - checkInDate) / (1000 * 60 * 60 * 24),
     );
 
+    if (priceDisplay) priceDisplay.innerHTML = "";
+    if (bookingMessage && bookingMessage.className === "booking-message error") {
+      bookingMessage.textContent = "";
+      bookingMessage.className = "booking-message";
+    }
+
     try {
       // El servidor calcula noches y precio con SU tarifa; solo enviamos fechas
       const response = await fetch(`${API_URL}/api/calculate-price`, {
@@ -272,18 +278,26 @@ document.addEventListener("DOMContentLoaded", () => {
         }),
       });
 
-      if (response.ok) {
-        const pricing = await response.json();
-        const cleaningRow =
-          pricing.cleaning_fee > 0
-            ? `
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({}));
+        if (bookingMessage) {
+          bookingMessage.textContent = error.error || "Failed to calculate price";
+          bookingMessage.className = "booking-message error";
+        }
+        return;
+      }
+
+      const pricing = await response.json();
+      const cleaningRow =
+        pricing.cleaning_fee > 0
+          ? `
               <div class="price-row">
                 <span>Cleaning fee:</span>
                 <span>$${pricing.cleaning_fee.toFixed(2)}</span>
               </div>`
-            : "";
-        if (priceDisplay) {
-          priceDisplay.innerHTML = `
+          : "";
+      if (priceDisplay) {
+        priceDisplay.innerHTML = `
             <div class="price-breakdown">
               <div class="price-row">
                 <span>Nightly rate × ${nights} nights:</span>
@@ -303,9 +317,13 @@ document.addEventListener("DOMContentLoaded", () => {
               </div>
             </div>
           `;
-        }
       }
     } catch (error) {
+      if (priceDisplay) priceDisplay.innerHTML = "";
+      if (bookingMessage) {
+        bookingMessage.textContent = "Unable to calculate price. Please try again.";
+        bookingMessage.className = "booking-message error";
+      }
       console.error("Error calculating price:", error);
     }
   }
