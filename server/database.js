@@ -15,6 +15,9 @@ const pricingReady = new Promise((resolve, reject) => {
   resolvePricingReady = resolve;
   rejectPricingReady = reject;
 });
+pricingReady.catch((err) => {
+  console.error("Pricing schema is not ready:", err.message);
+});
 
 const db = new sqlite3.Database(dbPath, (err) => {
   if (err) {
