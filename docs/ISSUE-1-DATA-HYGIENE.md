@@ -31,7 +31,7 @@ Issue #1 does not duplicate the completed production cutover work:
 - `f45543fb563114b9a6ed1cf9c20980ed421afd47`
 - `d8c0d6dbec028f349c8ed920356b20b0119e23e1`
 
-The database schema includes `manual_charges.guest_name` and `manual_charges.guest_email`, so a committed runtime database is inherently capable of containing customer PII. The currently tracked database also contains runtime/test state rather than source code.
+The database schema includes `manual_charges.guest_name` and `manual_charges.guest_email`, so a committed runtime database is inherently capable of containing customer PII. The historical/pre-removal repository database artifact also contained runtime/test state rather than source code.
 
 No verified production guest PII or secret was identified from the repository-visible evidence reviewed for this change. However, because historical SQLite blobs are binary and remain retrievable from Git history, absence of PII in every historical blob cannot be proven from the available connector inspection. The repository history must therefore be treated conservatively as potentially sensitive.
 
