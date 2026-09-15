@@ -40,6 +40,24 @@ async function req(method, p, body, headers = {}) {
     process.env.ADMIN_PASSWORD || env.match(/^ADMIN_PASSWORD=(.*)$/m)?.[1]?.trim();
   if (!ADMIN_PASSWORD) throw new Error("ADMIN_PASSWORD de test manquant");
 
+  const configuredAdminOrigin = (
+    process.env.ALLOWED_ORIGINS ||
+    process.env.DOMAIN ||
+    ""
+  )
+    .split(",")
+    .map((origin) => origin.trim())
+    .find(Boolean);
+  if (process.env.NODE_ENV === "production" && !configuredAdminOrigin) {
+    throw new Error(
+      "ALLOWED_ORIGINS or DOMAIN is required for production security tests",
+    );
+  }
+  const adminMutationHeaders =
+    process.env.NODE_ENV === "production"
+      ? { Origin: configuredAdminOrigin }
+      : {};
+
   console.log("\n[Autenticación y autorización]");
   let r = await req("GET", "/api/admin/bookings");
   check("admin sans cookie → 401", r.status === 401, `status=${r.status}`);
@@ -83,15 +101,23 @@ async function req(method, p, body, headers = {}) {
 
   r = await req("POST", "/api/admin/logout", null, {
     Cookie: sessionCookie.split(";")[0],
+    ...adminMutationHeaders,
   });
+  const clearedSessionCookie = r.headers.get("set-cookie") || "";
+  const logoutCookieMatchesEnvironment =
+    process.env.NODE_ENV === "production"
+      ? /Secure/i.test(clearedSessionCookie) &&
+        /SameSite=None/i.test(clearedSessionCookie)
+      : !/Secure/i.test(clearedSessionCookie) &&
+        /SameSite=Lax/i.test(clearedSessionCookie);
   check(
     "logout → 204 y cookie eliminada",
     r.status === 204 &&
-      /admin_session=;/i.test(r.headers.get("set-cookie") || "") &&
-      /Path=\//i.test(r.headers.get("set-cookie") || "") &&
-      /HttpOnly/i.test(r.headers.get("set-cookie") || "") &&
-      /SameSite=Lax/i.test(r.headers.get("set-cookie") || ""),
-    `status=${r.status}`,
+      /admin_session=;/i.test(clearedSessionCookie) &&
+      /Path=\//i.test(clearedSessionCookie) &&
+      /HttpOnly/i.test(clearedSessionCookie) &&
+      logoutCookieMatchesEnvironment,
+    `status=${r.status}; set-cookie=${clearedSessionCookie || "sin Set-Cookie"}`,
   );
 
   r = await req("POST", "/api/admin/bookings/0/cancel", null, {
@@ -105,6 +131,14 @@ async function req(method, p, body, headers = {}) {
     "CSP explícite présente",
     /default-src 'self'/.test(r.headers.get("content-security-policy") || ""),
     r.headers.get("content-security-policy") || "sans CSP",
+  );
+
+  r = await req("GET", "/index.html");
+  check(
+    "réponse statique protégée par CSP",
+    r.status === 200 &&
+      /default-src 'self'/.test(r.headers.get("content-security-policy") || ""),
+    `status=${r.status}; csp=${r.headers.get("content-security-policy") || "sans CSP"}`,
   );
 
   // Rate limit del login: el 6.º intento en 15 min debe ser 429
