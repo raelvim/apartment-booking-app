@@ -245,9 +245,13 @@ function loadTaxSettingsFromDB(callback) {
       // Preferir columnas nuevas; si son null (DB vieja), usar defaults
       callback({
         mecklenburg_sales:
-          row.mecklenburg_sales != null ? row.mecklenburg_sales : 8.25,
+          row.mecklenburg_sales != null
+            ? row.mecklenburg_sales
+            : DEFAULT_PRICING.mecklenburg_sales,
         mecklenburg_occupancy:
-          row.mecklenburg_occupancy != null ? row.mecklenburg_occupancy : 8.0,
+          row.mecklenburg_occupancy != null
+            ? row.mecklenburg_occupancy
+            : DEFAULT_PRICING.mecklenburg_occupancy,
       });
     } else {
       callback(getTaxConfig());
@@ -841,66 +845,59 @@ app.delete("/api/admin/bookings/:id", checkAdminAuth, (req, res) => {
 
 // ============ MONTHLY RATE ENDPOINTS ============
 
-// Obtener tarifa mensual
+// Compatibility endpoints backed by the same complete pricing snapshot.
 app.get("/api/monthly-rate", (req, res) => {
-  loadTaxSettingsFromDB((rates) => {
-    // El monthly_rate viene de la DB; si no existe, usar default
-    db.get(
-      `SELECT monthly_rate FROM tax_settings ORDER BY updated_at DESC, id DESC LIMIT 1`,
-      [],
-      (err, row) => {
-        const monthlyRate =
-          row && row.monthly_rate != null ? row.monthly_rate : 1800;
-        res.json({ monthly_rate: monthlyRate });
-      },
-    );
-  });
+  loadRatesFromDB((rates) => res.json({ monthly_rate: rates.monthly_rate }));
 });
 
-// Obtener configuración de tarifa mensual (admin)
 app.get("/api/admin/monthly-rate", checkAdminAuth, (req, res) => {
-  db.get(
-    `SELECT monthly_rate FROM tax_settings ORDER BY updated_at DESC, id DESC LIMIT 1`,
-    [],
-    (err, row) => {
-      if (err) {
-        return res.status(500).json({ error: err.message });
-      }
-      res.json({
-        monthly_rate: row && row.monthly_rate != null ? row.monthly_rate : 1800,
-      });
-    },
-  );
+  loadRatesFromDB((rates) => res.json({ monthly_rate: rates.monthly_rate }));
 });
 
-// Actualizar tarifa mensual (admin)
 app.post("/api/admin/monthly-rate", checkAdminAuth, (req, res) => {
   const { monthly_rate } = req.body;
-  if (monthly_rate === undefined || monthly_rate <= 0) {
-    return res.status(400).json({ error: "Invalid monthly rate" });
-  }
-  // Actualizar el registro más reciente de tax_settings
-  db.run(
-    `UPDATE tax_settings SET monthly_rate = ? WHERE id = (SELECT id FROM tax_settings ORDER BY updated_at DESC, id DESC LIMIT 1)`,
-    [monthly_rate],
-    function (err) {
-      if (err) {
-        // Si no existe registro, crear uno con defaults
-        db.run(
-          `INSERT INTO tax_settings (nc_state, mecklenburg_local, occupancy, mecklenburg_sales, mecklenburg_occupancy, monthly_rate, updated_at) VALUES (0, 0, 0, 8.25, 8.0, ?, datetime('now'))`,
-          [monthly_rate],
-          function (err2) {
-            if (err2) {
-              return res.status(500).json({ error: err2.message });
-            }
-            broadcastAdminUpdate();
-            res.json({ message: "Monthly rate updated", monthly_rate });
-          },
-        );
-      } else {
-        broadcastAdminUpdate();
-        res.json({ message: "Monthly rate updated", monthly_rate });
+
+  db.get(
+    `SELECT nightly_rate, monthly_rate, cleaning_fee, minimum_nights,
+            mecklenburg_sales, mecklenburg_occupancy
+       FROM tax_settings
+       ORDER BY updated_at DESC, id DESC
+       LIMIT 1`,
+    [],
+    (readErr, current) => {
+      if (readErr) {
+        return res.status(500).json({ error: readErr.message });
       }
+
+      let pricing;
+      try {
+        pricing = mergePricingSettings(current, { monthly_rate });
+      } catch (validationError) {
+        return res.status(400).json({ error: validationError.message });
+      }
+
+      db.run(
+        `INSERT INTO tax_settings (
+           nc_state, mecklenburg_local, occupancy,
+           nightly_rate, monthly_rate, cleaning_fee, minimum_nights,
+           mecklenburg_sales, mecklenburg_occupancy, updated_at
+         ) VALUES (0, 0, 0, ?, ?, ?, ?, ?, ?, datetime('now'))`,
+        [
+          pricing.nightly_rate,
+          pricing.monthly_rate,
+          pricing.cleaning_fee,
+          pricing.minimum_nights,
+          pricing.mecklenburg_sales,
+          pricing.mecklenburg_occupancy,
+        ],
+        function (writeErr) {
+          if (writeErr) {
+            return res.status(500).json({ error: writeErr.message });
+          }
+          broadcastAdminUpdate();
+          res.json({ message: "Monthly rate updated", monthly_rate });
+        },
+      );
     },
   );
 });
