@@ -95,13 +95,12 @@
           try {
             const response = await fetch(`${API_URL}/api/admin/login`, {
               method: "POST",
+              credentials: "include",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ password }),
             });
 
             if (response.ok) {
-              const data = await response.json();
-              localStorage.setItem("admin_token", data.token);
               window.location.href = "/admin.html";
             } else {
               errorMessage.textContent = "Incorrect password.";
