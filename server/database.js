@@ -7,6 +7,10 @@ const {
 } = require("./database-path");
 
 const dbPath = ensureDatabaseDirectory(resolveDatabasePath());
+const defaultMecklenburgSales =
+  parseFloat(process.env.TAX_MECKLENBURG_SALES) || 8.25;
+const defaultMecklenburgOccupancy =
+  parseFloat(process.env.TAX_MECKLENBURG_OCCUPANCY) || 8.0;
 
 // Open the configured database and keep all statements serialized. Scheduling the
 // schema bootstrap immediately (rather than from the async open callback) ensures
@@ -129,6 +133,8 @@ db.run(
 // monthly-rate endpoint updates the latest row. SQLite considers an UPDATE that
 // matches zero rows successful, so without this seed the first save could report
 // success without persisting anything. Existing settings rows are never changed.
+// Keep the seeded tax values aligned with the same environment-backed defaults
+// used by the runtime pricing fallback rather than hard-coding a conflicting row.
 db.run(
   `INSERT INTO tax_settings (
     nc_state,
@@ -140,8 +146,9 @@ db.run(
     monthly_rate,
     nightly_rate
   )
-  SELECT 0, 0, 0, datetime('now'), 8.25, 8.0, 1800, 150
+  SELECT 0, 0, 0, datetime('now'), ?, ?, 1800, 150
   WHERE NOT EXISTS (SELECT 1 FROM tax_settings)`,
+  [defaultMecklenburgSales, defaultMecklenburgOccupancy],
   (err) => {
     if (err) {
       console.error("Error al inicializar tax_settings", err.message);
