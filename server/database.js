@@ -125,6 +125,30 @@ db.run(
   () => {}, // ignora error si la columna ya existe
 );
 
+// A fresh or otherwise empty database needs one settings row because the admin
+// monthly-rate endpoint updates the latest row. SQLite considers an UPDATE that
+// matches zero rows successful, so without this seed the first save could report
+// success without persisting anything. Existing settings rows are never changed.
+db.run(
+  `INSERT INTO tax_settings (
+    nc_state,
+    mecklenburg_local,
+    occupancy,
+    updated_at,
+    mecklenburg_sales,
+    mecklenburg_occupancy,
+    monthly_rate,
+    nightly_rate
+  )
+  SELECT 0, 0, 0, datetime('now'), 8.25, 8.0, 1800, 150
+  WHERE NOT EXISTS (SELECT 1 FROM tax_settings)`,
+  (err) => {
+    if (err) {
+      console.error("Error al inicializar tax_settings", err.message);
+    }
+  },
+);
+
 // Bloqueos temporales de fechas mientras el pago está en curso.
 // Evitan reservas dobles simultáneas: si el pago se completa, el webhook
 // convierte el bloqueo en reserva; si expira o falla, se libera.
