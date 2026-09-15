@@ -257,7 +257,7 @@
   <body>
     <div class="admin-container">
       <div class="admin-header">
-        <h1 class="admin-title">ð Booking Management</h1>
+        <h1 class="admin-title">📅 Booking Management</h1>
         <a href="tax-settings.html" class="btn-tax-settings">
           <i class="fas fa-cog"></i> Configure Tax Rates
         </a>
@@ -400,7 +400,7 @@
         : PROD_API_URL;
 
       document.addEventListener("DOMContentLoaded", () => {
-        // --- VERIFICACIÃN Y REFERENCIAS ---
+        // --- VERIFICACIÓN Y REFERENCIAS ---
         const token = localStorage.getItem("admin_token");
         if (!token) {
           window.location.href = "login.html";
@@ -549,7 +549,7 @@
           }
         }
 
-        // --- LÃGICA DE CLICS EN BOTONES ---
+        // --- LÓGICA DE CLICS EN BOTONES ---
         document
           .querySelector(".admin-container")
           .addEventListener("click", async (e) => {
